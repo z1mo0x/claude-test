@@ -11,8 +11,9 @@ export const profile = {
 }
 
 export const media = {
-  heroVideo:
-    'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4',
+  // Generated with Gemini (Veo); trimmed to a seamless 9 s loop without audio.
+  heroVideo: '/media/hero.mp4',
+  heroPoster: '/media/hero-poster.webp',
   // Montage of real project screenshots, rendered from the projects themselves.
   showreel: '/media/showreel.webm',
   showreelPoster: '/media/showreel-poster.webp',

@@ -20,9 +20,10 @@ export function Hero() {
         loop
         muted
         playsInline
+        poster={media.heroPoster}
         onLoadedData={(e) => setUsingFallback(e.currentTarget.currentSrc.includes(media.showreel))}
       >
-        {/* If the external clip can't load, the browser moves on to the self-hosted showreel. */}
+        {/* If the hero clip can't play, the browser moves on to the showreel. */}
         <source src={media.heroVideo} type="video/mp4" />
         <source src={media.showreel} type="video/webm" />
       </video>
