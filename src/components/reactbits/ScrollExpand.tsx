@@ -28,6 +28,7 @@ export interface ScrollExpandProps {
   alt?: string;
   title?: ReactNode;
   titleClassName?: string;
+  mediaClassName?: string;
   scrollHint?: string;
   startWidth?: number;
   startHeight?: number;
@@ -54,6 +55,7 @@ const ScrollExpand: React.FC<ScrollExpandProps> = ({
   alt = '',
   title = null,
   titleClassName = '',
+  mediaClassName = '',
   scrollHint = '',
   startWidth = 42,
   startHeight = 58,
@@ -237,7 +239,7 @@ const ScrollExpand: React.FC<ScrollExpandProps> = ({
     mediaType === 'video' ? (
       <video
         ref={mediaRef}
-        className="absolute inset-0 w-full h-full object-cover origin-center select-none [will-change:transform]"
+        className={`absolute inset-0 w-full h-full object-cover origin-center select-none [will-change:transform] ${mediaClassName}`}
         src={src}
         poster={poster}
         autoPlay
@@ -248,7 +250,7 @@ const ScrollExpand: React.FC<ScrollExpandProps> = ({
     ) : (
       <img
         ref={mediaRef}
-        className="absolute inset-0 w-full h-full object-cover origin-center select-none [will-change:transform]"
+        className={`absolute inset-0 w-full h-full object-cover origin-center select-none [will-change:transform] ${mediaClassName}`}
         src={src}
         alt={alt}
         draggable={false}

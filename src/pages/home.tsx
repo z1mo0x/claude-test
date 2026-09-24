@@ -5,6 +5,7 @@ import { Hero } from '@/components/sections/hero'
 import { Manifesto } from '@/components/sections/manifesto'
 import { Projects } from '@/components/sections/projects'
 import { Services } from '@/components/sections/services'
+import { WorkStrip } from '@/components/sections/work-strip'
 
 export function HomePage() {
   return (
@@ -14,6 +15,7 @@ export function HomePage() {
         <Manifesto />
         <Projects />
         <About />
+        <WorkStrip />
         <Services />
         <Contact />
       </main>

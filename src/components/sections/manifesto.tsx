@@ -14,8 +14,11 @@ export function Manifesto() {
     <section aria-label="Коротко обо мне">
       <ScrollExpand
         useWindowScroll
-        src={media.aboutMedia.src}
-        mediaType={media.aboutMedia.type}
+        src={media.showreel}
+        poster={media.showreelPoster}
+        mediaType="video"
+        // The showreel is bright and busy; dim it so the white type on top stays readable.
+        mediaClassName="brightness-[0.5] saturate-[0.85]"
         title={
           <span>
             Код <em className="text-white/60 not-italic">с характером</em>
@@ -26,7 +29,7 @@ export function Manifesto() {
         startWidth={46}
         startHeight={52}
         startRadius={32}
-        overlayScrim={0.6}
+        overlayScrim={0.55}
         scrollDistance={1.1}
         holdDistance={0.5}
         onProgress={(p) => {
@@ -43,7 +46,7 @@ export function Manifesto() {
           <dl className="mt-12 grid w-full grid-cols-1 gap-8 sm:grid-cols-3">
             {stats.map((s) => (
               <div key={s.label} className="flex flex-col items-center">
-                <dt className="order-2 mt-2 text-sm text-white/70">{s.label}</dt>
+                <dt className="order-2 mt-2 text-sm text-white/85">{s.label}</dt>
                 <dd className="order-1 text-6xl leading-none text-white" style={displayFont}>
                   <CountUp to={s.value} duration={1.6} startWhen={revealed} />
                   {s.suffix}

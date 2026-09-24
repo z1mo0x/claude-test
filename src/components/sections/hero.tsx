@@ -1,19 +1,31 @@
+import { useState } from 'react'
+
 import { SiteNav } from '@/components/site-nav'
 import { Button } from '@/components/ui/button'
 import { media, profile } from '@/data/site'
-import { displayFont } from '@/lib/utils'
+import { cn, displayFont } from '@/lib/utils'
 
 export function Hero() {
+  const [usingFallback, setUsingFallback] = useState(false)
+
   return (
     <header id="top" className="relative flex min-h-svh flex-col overflow-hidden">
       <video
-        className="absolute inset-0 z-0 h-full w-full object-cover"
-        src={media.heroVideo}
+        className={cn(
+          'absolute inset-0 z-0 h-full w-full object-cover transition-[filter] duration-700',
+          // The showreel is busier than the ambient clip, so dim it to keep the headline legible.
+          usingFallback && 'brightness-[0.35] saturate-[0.8]',
+        )}
         autoPlay
         loop
         muted
         playsInline
-      />
+        onLoadedData={(e) => setUsingFallback(e.currentTarget.currentSrc.includes(media.showreel))}
+      >
+        {/* If the external clip can't load, the browser moves on to the self-hosted showreel. */}
+        <source src={media.heroVideo} type="video/mp4" />
+        <source src={media.showreel} type="video/webm" />
+      </video>
       <SiteNav />
       <section className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pt-32 pb-40 py-[90px] text-center">
         <h1

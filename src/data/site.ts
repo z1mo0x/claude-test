@@ -13,11 +13,9 @@ export const profile = {
 export const media = {
   heroVideo:
     'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4',
-  // Swap for a separate clip or photo once one is generated; the hero video is reused for now.
-  aboutMedia: {
-    src: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4',
-    type: 'video' as 'video' | 'image',
-  },
+  // Montage of real project screenshots, rendered from the projects themselves.
+  showreel: '/media/showreel.webm',
+  showreelPoster: '/media/showreel-poster.webp',
 }
 
 export const nav = [
@@ -45,7 +43,21 @@ export type Project = {
   features: string[]
   stack: string[]
   repo: string
+  /** Screenshots in public/projects; the first one is the cover. Each has a `-sm` variant for small sizes. */
+  shots: Shot[]
 }
+
+export type Shot = { src: string; alt: string; device: 'desktop' | 'mobile' }
+
+const shot = (name: string, alt: string, device: Shot['device'] = 'desktop'): Shot => ({
+  src: `/projects/${name}`,
+  alt,
+  device,
+})
+
+/** Resolves a shot's base path to its full-size or small WebP. */
+export const shotUrl = (s: Shot | string, size: 'lg' | 'sm' = 'lg') =>
+  `${typeof s === 'string' ? s : s.src}${size === 'sm' ? '-sm' : ''}.webp`
 
 export const projects: Project[] = [
   {
@@ -64,6 +76,7 @@ export const projects: Project[] = [
     ],
     stack: ['Next.js', 'TypeScript', 'Prisma', 'NextAuth', 'Supabase', 'TanStack', 'shadcn/ui'],
     repo: 'https://github.com/Integra-bussiness/Integra',
+    shots: [shot('integra-1', 'Integra: схема базы данных в разделе «Структура»'), shot('integra-2', 'Integra: форма входа')],
   },
   {
     id: 'project-yard',
@@ -81,6 +94,7 @@ export const projects: Project[] = [
     ],
     stack: ['Next.js', 'TypeScript', 'Supabase', 'React Query', 'Framer Motion', 'shadcn/ui'],
     repo: 'https://github.com/z1mo0x/gravejects',
+    shots: [shot('project-yard-1', 'Project Yard: главная страница кладбища проектов'), shot('project-yard-m', 'Project Yard на телефоне', 'mobile')],
   },
   {
     id: 'seller-labs',
@@ -98,6 +112,7 @@ export const projects: Project[] = [
     ],
     stack: ['Next.js', 'TypeScript', 'React Hook Form', 'Zod', 'Framer Motion', 'Tailwind'],
     repo: 'https://github.com/z1mo0x/Seller-Labs',
+    shots: [shot('seller-labs-1', 'Seller Labs: первый экран с инструментами для селлеров')],
   },
   {
     id: 'wishlist',
@@ -115,6 +130,7 @@ export const projects: Project[] = [
     ],
     stack: ['React', 'Vite', 'TypeScript', 'Supabase', 'shadcn/ui', 'Framer Motion'],
     repo: 'https://github.com/z1mo0x/wishlist',
+    shots: [shot('wishlist-1', 'Wishlist: шапка со счётчиком дней до праздника'), shot('wishlist-m', 'Wishlist на телефоне', 'mobile')],
   },
   {
     id: 'linnark-nails',
@@ -128,6 +144,11 @@ export const projects: Project[] = [
     features: ['Плавный скролл на Lenis', 'Карусели на Swiper и Embla', 'Анимации появления блоков'],
     stack: ['Next.js', 'TypeScript', 'Lenis', 'Swiper', 'Framer Motion', 'Tailwind'],
     repo: 'https://github.com/z1mo0x/linnark-nails',
+    shots: [
+      shot('linnark-nails-1', 'Linnark Nails: первый экран с работами мастера'),
+      shot('linnark-nails-2', 'Linnark Nails: карусель работ и цены'),
+      shot('linnark-nails-3', 'Linnark Nails: контакты и схема проезда'),
+    ],
   },
   {
     id: 'intro',
@@ -141,6 +162,11 @@ export const projects: Project[] = [
     features: ['Сцена на React Three Fiber и Drei', 'Анимации, привязанные к скроллу', 'Плавный скролл на Lenis'],
     stack: ['Next.js', 'React Three Fiber', 'Three.js', 'Lenis', 'Framer Motion'],
     repo: 'https://github.com/z1mo0x/intro',
+    shots: [
+      shot('intro-1', 'Intro 3D: первый экран с 3D-клавиатурой'),
+      shot('intro-2', 'Intro 3D: клавиатура после скролла'),
+      shot('intro-m', 'Intro 3D на телефоне', 'mobile'),
+    ],
   },
 ]
 
@@ -151,6 +177,7 @@ export const moreProjects = [
     text: 'Интерактивная открытка к рождению ребёнка',
     stack: 'Next.js',
     repo: 'https://github.com/z1mo0x/pozdravlenie',
+    image: '/projects/pozdravlenie-1',
   },
   {
     title: 'Дайджест недели',
@@ -158,6 +185,7 @@ export const moreProjects = [
     text: 'Новостной дайджест компании Бревис с комментариями',
     stack: 'React · Supabase',
     repo: 'https://github.com/z1mo0x/brevis-dyedjest',
+    image: '/projects/brevis-1',
   },
   {
     title: 'Windows-портфолио',
@@ -165,6 +193,7 @@ export const moreProjects = [
     text: 'Портфолио в виде рабочего стола: окна, блокнот, календарь',
     stack: 'React · TypeScript',
     repo: 'https://github.com/z1mo0x/portfolio',
+    image: '/projects/windows-1',
   },
   {
     title: 'Чихалка',
@@ -172,6 +201,7 @@ export const moreProjects = [
     text: 'Значение чиха по времени и дню недели',
     stack: 'HTML · CSS · JS',
     repo: 'https://github.com/z1mo0x/chihalka',
+    image: '/projects/chihalka-1',
   },
   {
     title: 'Ранняя вёрстка',
@@ -179,6 +209,7 @@ export const moreProjects = [
     text: 'YANKI, Womazing, Marico, Qubly — адаптивные многостраничные макеты',
     stack: 'HTML · SCSS · Tailwind',
     repo: 'https://github.com/z1mo0x?tab=repositories',
+    image: '/projects/yanki-1',
   },
 ]
 
