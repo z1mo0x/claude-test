@@ -3,8 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts Launch out/projectyard-launch.mp4",
+    "sound": "node sound/build.mjs",
+    "studio": "npm run sound && remotion studio src/index.ts",
+    "render": "npm run sound && remotion render src/index.ts Launch out/projectyard-launch.mp4",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

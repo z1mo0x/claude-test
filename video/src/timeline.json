@@ -1,0 +1,13 @@
+{
+  "fps": 30,
+  "transition": 15,
+  "scenes": {
+    "cold": 90,
+    "wall": 165,
+    "logo": 80,
+    "demo": 225,
+    "funeral": 240,
+    "certificate": 180,
+    "outro": 150
+  }
+}

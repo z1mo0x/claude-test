@@ -1,4 +1,4 @@
-import { AbsoluteFill } from 'remotion'
+import { AbsoluteFill, Audio } from 'remotion'
 import { linearTiming, TransitionSeries } from '@remotion/transitions'
 import { fade } from '@remotion/transitions/fade'
 import { usePreload } from './fonts'
@@ -10,10 +10,13 @@ import { Funeral } from './scenes/Funeral'
 import { Logo } from './scenes/Logo'
 import { Outro } from './scenes/Outro'
 import { Wall } from './scenes/Wall'
+import timeline from './timeline.json'
+// Звук собирает sound/build.mjs по тем же таймингам (npm run sound).
+import soundtrack from '../sound/out/soundtrack.wav'
 
-/** Длительность сцен в кадрах при 30 fps. Между сценами — растворение на TRANSITION кадров. */
-export const SCENES = { cold: 90, wall: 165, logo: 80, demo: 225, funeral: 240, certificate: 180, outro: 150 }
-const TRANSITION = 15
+/** Длительность сцен в кадрах и растворение между ними. Те же числа читает звук. */
+export const SCENES = timeline.scenes
+const TRANSITION = timeline.transition
 export const LAUNCH_FRAMES = Object.values(SCENES).reduce((a, b) => a + b, 0) - TRANSITION * (Object.keys(SCENES).length - 1)
 
 export function Launch({ site }: { site: string }) {
@@ -22,6 +25,7 @@ export function Launch({ site }: { site: string }) {
   return (
     <AbsoluteFill>
       <Background />
+      <Audio src={soundtrack} />
       <TransitionSeries>
         <TransitionSeries.Sequence durationInFrames={SCENES.cold}>
           <ColdOpen />
