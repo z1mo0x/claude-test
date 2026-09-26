@@ -126,11 +126,24 @@ function normalize(x, peak = 1) {
 
 // ── Звуки ──────────────────────────────────────────────────────────────
 
-/** Мягкий щелчок клавиши: без звонкого верха и без низкого «тела». size > 1 — клавиша крупнее, как Enter. */
-function keyClick(size = 1) {
-  const tick = shape(filter(noise(0.04 * size), 'bandpass', between(1300, 2300) / size, 0.8), hit(0.001, 0.005 * size))
-  const pad = shape(filter(noise(0.04 * size), 'lowpass', 700), decay(0.007 * size))
-  return normalize(filter(mix([tick, 1], [pad, 0.5]), 'lowpass', 4000))
+/**
+ * Клавиатура как на айфоне: короткий сухой «тик» от резонанса около 2 кГц, без низа.
+ * pitch < 1 — клавиша ниже, как Enter и пробел на iOS.
+ */
+function keyClick(pitch = 1) {
+  const b = buffer(0.03)
+  const n = Math.round(0.0008 * SR)
+  for (let i = 0; i < n; i++) b[i] = white() * (1 - i / n)
+  const f = 2100 * pitch * between(0.97, 1.03)
+  const ring = filter(b, 'bandpass', f, 5)
+  const edge = shape(filter(b, 'highpass', 3500), decay(0.0015))
+  return normalize(filter(mix([ring, 1], [edge, 0.08]), 'highpass', 400))
+}
+
+/** Мягкий свист воздуха: шум через полосовой фильтр, частота плавно едет от from к to. */
+function whoosh(seconds, from, to) {
+  const air = filter(noise(seconds), 'bandpass', (t) => from * Math.pow(to / from, t / seconds), 0.7)
+  return normalize(filter(shape(air, arc(seconds, 3)), 'lowpass', 5000))
 }
 
 function mouseClick() {
@@ -205,6 +218,11 @@ function place(sound, seconds, { gain = 1, pan = 0, reverb = 0.15 } = {}) {
   }
 }
 
+/** Ставит звук так, чтобы его середина пришлась на секунду peak. */
+function centred(sound, peak, options) {
+  place(sound, peak - sound.length / SR / 2, options)
+}
+
 /** Freeverb: 8 гребенчатых и 4 всепропускающих фильтра на канал. */
 function freeverb(inL, inR, room = 0.86, damp = 0.35) {
   const scale = SR / 44100
@@ -238,28 +256,55 @@ function freeverb(inL, inR, room = 0.86, damp = 0.35) {
 }
 
 // ── Партитура ──────────────────────────────────────────────────────────
-// Только то, что происходит в кадре: печать, клики, гроб, земля, камень, резец.
-// Ни фона, ни музыки, ни ударов на сменах сцен. Где в кадре ничего не делают, тишина.
+// Только то, что происходит в кадре: печать, клики, гроб, земля, камень, резец,
+// и тихий свист воздуха, когда появляется текст или меняется сцена. Ни фона, ни музыки, ни ударов.
 
-// Печать: по щелчку на каждую появившуюся букву.
+// Печать: по тику на каждую появившуюся букву.
 function typing(scene, start, count, framesPerChar, gain) {
   for (let i = 1; i <= count; i++) {
-    place(keyClick(), at(scene, start + i * framesPerChar), { gain: gain * between(0.7, 1), pan: between(-0.1, 0.1), reverb: 0.04 })
+    place(keyClick(), at(scene, start + i * framesPerChar), { gain: gain * between(0.85, 1), pan: between(-0.08, 0.08), reverb: 0.02 })
   }
 }
 
+// Смена сцены: переход длится timeline.transition кадров, середина свиста — на середине перехода.
+for (const scene of Object.keys(starts).slice(1)) {
+  centred(whoosh(0.8, 350, 1600), at(scene, timeline.transition / 2), { gain: 0.05, reverb: 0.2 })
+}
+
+// Появление текста: слова выезжают за 6–8 кадров, середина свиста чуть позже старта.
+const text = [
+  ['cold', 58],
+  ['wall', 8],
+  ['wall', 16],
+  ['wall', 106],
+  ['wall', 112],
+  ['logo', 36],
+  ['funeral', 22],
+  ['funeral', 58],
+  ['funeral', 126],
+  ['certificate', 10],
+  ['certificate', 30],
+  ['outro', 6],
+  ['outro', 12],
+  ['outro', 62],
+  ['outro', 80],
+]
+text.forEach(([scene, frame], i) => {
+  centred(whoosh(0.45, 900, 2600), at(scene, frame + 4), { gain: 0.03, pan: i % 2 ? 0.15 : -0.15, reverb: 0.15 })
+})
+
 // 1. git commit -m "доделаю на выходных" и Enter.
-typing('cold', 10, 35, 1, 0.14)
-place(keyClick(1.8), at('cold', 48), { gain: 0.2, reverb: 0.06 })
+typing('cold', 10, 35, 1, 0.045)
+place(keyClick(0.75), at('cold', 48), { gain: 0.06, reverb: 0.02 })
 
 // 3. Логотип печатается.
-typing('logo', 12, 12, 1.2, 0.12)
+typing('logo', 12, 12, 1.2, 0.04)
 
 // 4. Сайт: курсор кликает и печатает (см. scenes/Demo.tsx).
 place(mouseClick(), at('demo', 62), { gain: 0.24, pan: -0.2 })
-typing('demo', 68, 26, 1.1, 0.12)
+typing('demo', 68, 26, 1.1, 0.04)
 place(mouseClick(), at('demo', 160), { gain: 0.24, pan: -0.1 })
-typing('demo', 168, 32, 0.95, 0.1)
+typing('demo', 168, 32, 0.95, 0.035)
 place(mouseClick(), at('demo', 212), { gain: 0.28 })
 
 // 5. Похороны (см. scenes/Funeral.tsx): гроб встаёт, опускается, земля, камень, резец.
@@ -275,7 +320,7 @@ place(grind(1.5), at('funeral', 152), { gain: 0.22, reverb: 0.15 })
 for (let i = 0; i < 11; i++) place(chisel(), at('funeral', 190 + i * 1.4), { gain: 0.1, pan: between(-0.1, 0.1), reverb: 0.2 })
 
 // 7. Финал: печатается projectyard>.
-typing('outro', 46, 12, 1.1, 0.12)
+typing('outro', 46, 12, 1.1, 0.04)
 
 // ── Мастер ─────────────────────────────────────────────────────────────
 
