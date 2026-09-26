@@ -126,11 +126,11 @@ function normalize(x, peak = 1) {
 
 // ── Звуки ──────────────────────────────────────────────────────────────
 
-function keyClick() {
-  const click = shape(filter(noise(0.04), 'bandpass', between(2200, 4800), 1.1), decay(0.0035))
-  const f = between(160, 230)
-  const body = shape(tone(0.05, () => f), decay(0.01))
-  return normalize(mix([click, 1.2], [body, 0.35]))
+/** Мягкий щелчок клавиши: без звонкого верха и без низкого «тела». size > 1 — клавиша крупнее, как Enter. */
+function keyClick(size = 1) {
+  const tick = shape(filter(noise(0.04 * size), 'bandpass', between(1300, 2300) / size, 0.8), hit(0.001, 0.005 * size))
+  const pad = shape(filter(noise(0.04 * size), 'lowpass', 700), decay(0.007 * size))
+  return normalize(filter(mix([tick, 1], [pad, 0.5]), 'lowpass', 4000))
 }
 
 function mouseClick() {
@@ -143,37 +143,11 @@ function mouseClick() {
   return normalize(mix([out, 1], [shape(tone(0.03, () => 1800), decay(0.004)), 0.15]))
 }
 
-function whoosh(seconds, from, to, q = 0.9) {
-  const air = filter(noise(seconds), 'bandpass', (t) => from * Math.pow(to / from, t / seconds), q)
-  return normalize(shape(air, arc(seconds)))
-}
-
-function riser(seconds) {
-  const hiss = shape(filter(noise(seconds), 'highpass', (t) => 300 * Math.pow(20, t / seconds), 0.8), (t) => Math.pow(t / seconds, 2.2))
-  const sweep = shape(tone(seconds, (t) => 90 * Math.pow(4, t / seconds)), (t) => Math.pow(t / seconds, 3))
-  return normalize(mix([hiss, 0.8], [sweep, 0.25]))
-}
-
-/** Низкий удар с насыщением: смены сцен, «похоронить», логотип. */
-function boom(base, seconds) {
-  const sub = shape(tone(seconds, (t) => base * (1 + 2.2 * Math.exp(-t / 0.045))), decay(seconds * 0.32))
-  const knock = shape(filter(noise(0.4), 'lowpass', 500), decay(0.05))
-  const out = mix([sub, 1], [knock, 0.6])
-  for (let i = 0; i < out.length; i++) out[i] = Math.tanh(out[i] * 1.6)
-  // На 3 дБ тише остального: иначе после нормализации клики и шорохи тонут.
-  return normalize(out, 0.7)
-}
-
-/** Глухой удар о землю. */
-function thud(base) {
-  const body = shape(tone(0.6, (t) => base * (1 + 1.5 * Math.exp(-t / 0.03))), decay(0.16))
-  const dust = shape(filter(noise(0.5), 'lowpass', 900), hit(0.005, 0.09))
-  return normalize(mix([body, 1], [dust, 0.45]))
-}
-
-function rumble(seconds, cutoff) {
-  const r = filter(brown(seconds), 'lowpass', cutoff, 0.7)
-  return normalize(shape(r, (t) => arc(seconds, 1)(t) * (0.8 + 0.2 * Math.sin(2 * Math.PI * 6 * t))))
+/** Гроб встаёт на землю: глухой деревянный стук, низ срезан, чтобы не гудело. */
+function knock() {
+  const wood = shape(filter(noise(0.25), 'bandpass', 240, 3), hit(0.002, 0.04))
+  const dust = shape(filter(noise(0.4), 'lowpass', 900), hit(0.004, 0.08))
+  return normalize(filter(mix([wood, 1], [dust, 0.6]), 'highpass', 90))
 }
 
 /** Скрежет камня и земли. */
@@ -189,6 +163,11 @@ function grind(seconds) {
   return normalize(shape(out, jitter))
 }
 
+/** Земля сыплется с лопаты. */
+function pour(seconds) {
+  return normalize(shape(filter(noise(seconds), 'lowpass', 1400), arc(seconds)))
+}
+
 function dirtHit() {
   const grit = shape(filter(noise(0.08), 'lowpass', between(1200, 3400)), hit(0.002, between(0.012, 0.032)))
   const low = shape(filter(noise(0.1), 'lowpass', 300), decay(0.03))
@@ -202,80 +181,6 @@ function chisel() {
   for (let i = 0; i < n; i++) b[i] = white() * (1 - i / n)
   const ring = filter(b, 'bandpass', between(3600, 6200), 16)
   return normalize(mix([ring, 6], [shape(filter(b, 'highpass', 2000), decay(0.004)), 0.8]))
-}
-
-/** Колокол по Риссе: негармонические обертоны с разным затуханием. */
-function bell(base, seconds) {
-  const partials = [
-    [0.56, 1, 1, 0],
-    [0.56, 0.67, 0.9, 1],
-    [0.92, 1, 0.65, 0],
-    [0.92, 1.8, 0.55, 1.7],
-    [1.19, 2.67, 0.325, 0],
-    [1.7, 1.67, 0.35, 0],
-    [2, 1.46, 0.25, 0],
-    [2.74, 1.33, 0.2, 0],
-    [3, 1.33, 0.15, 0],
-    [3.76, 1, 0.1, 0],
-    [4.07, 1.33, 0.075, 0],
-  ]
-  const out = buffer(seconds)
-  for (const [ratio, amp, dur, detune] of partials) {
-    const f = base * ratio + detune
-    const tau = dur * seconds * 0.3
-    for (let i = 0; i < out.length; i++) {
-      const t = i / SR
-      out[i] += amp * Math.sin(2 * Math.PI * f * t) * Math.exp(-t / tau) * Math.min(1, t / 0.002)
-    }
-  }
-  return normalize(out)
-}
-
-function shimmer(seconds) {
-  const voices = Array.from({ length: 9 }, () => ({ f: between(2000, 6500), rate: between(3, 9), phase: between(0, 6.28) }))
-  const out = buffer(seconds)
-  for (let i = 0; i < out.length; i++) {
-    const t = i / SR
-    let s = 0
-    for (const v of voices) s += Math.sin(2 * Math.PI * v.f * t + v.phase) * (0.5 + 0.5 * Math.sin(2 * Math.PI * v.rate * t))
-    out[i] = s
-  }
-  return normalize(shape(out, arc(seconds)))
-}
-
-function blip(notes) {
-  const out = buffer(0.6)
-  notes.forEach((f, n) => {
-    const offset = Math.round(n * 0.075 * SR)
-    for (let i = 0; i + offset < out.length; i++) {
-      const t = i / SR
-      out[i + offset] += (Math.sin(2 * Math.PI * f * t) + 0.25 * Math.sin(4 * Math.PI * f * t)) * Math.min(1, t / 0.004) * Math.exp(-t / 0.12)
-    }
-  })
-  return normalize(out)
-}
-
-function pop(f) {
-  const body = shape(tone(0.2, (t) => f * (1 + 0.8 * Math.exp(-t / 0.015))), hit(0.002, 0.05))
-  const tick = shape(filter(noise(0.01), 'highpass', 2500), decay(0.002))
-  return normalize(mix([body, 1], [tick, 0.3]))
-}
-
-function drone(seconds) {
-  const voices = [[55, 0.5], [55.6, 0.5], [82.4, 0.28], [110.3, 0.12], [164.8, 0.05]]
-  const out = buffer(seconds)
-  for (let i = 0; i < out.length; i++) {
-    const t = i / SR
-    let s = 0
-    for (const [f, a] of voices) s += a * Math.sin(2 * Math.PI * f * t)
-    out[i] = s * (0.75 + 0.25 * Math.sin(2 * Math.PI * 0.07 * t))
-  }
-  return normalize(out)
-}
-
-function wind(seconds) {
-  const air = filter(noise(seconds), 'bandpass', (t) => 520 + 260 * Math.sin(2 * Math.PI * 0.09 * t) + 120 * Math.sin(2 * Math.PI * 0.23 * t), 0.6)
-  return normalize(shape(air, (t) => 0.6 + 0.4 * Math.sin(2 * Math.PI * 0.05 * t + 1)))
 }
 
 // ── Микшер ─────────────────────────────────────────────────────────────
@@ -333,116 +238,44 @@ function freeverb(inL, inR, room = 0.86, damp = 0.35) {
 }
 
 // ── Партитура ──────────────────────────────────────────────────────────
-
-// Фон: гул и ветер. Тихо на интерфейсе, громче на похоронах, затухание в конце.
-const bedPoints = [
-  [0, 0],
-  [20, 0.5],
-  [starts.demo, 0.55],
-  [starts.demo + 30, 0.4],
-  [starts.funeral, 0.5],
-  [starts.funeral + 30, 1],
-  [starts.certificate + 20, 0.7],
-  [starts.outro, 0.9],
-  [totalFrames - 40, 0.7],
-  [totalFrames, 0],
-]
-function bedLevel(t) {
-  const f = t * FPS
-  for (let i = 1; i < bedPoints.length; i++) {
-    const [f0, v0] = bedPoints[i - 1]
-    const [f1, v1] = bedPoints[i]
-    if (f <= f1) return v0 + ((v1 - v0) * (f - f0)) / Math.max(1, f1 - f0)
-  }
-  return 0
-}
-place(shape(drone(duration), bedLevel), 0, { gain: 0.16, reverb: 0.05 })
-place(shape(wind(duration), bedLevel), 0, { gain: 0.1, reverb: 0.1, pan: -0.2 })
+// Только то, что происходит в кадре: печать, клики, гроб, земля, камень, резец.
+// Ни фона, ни музыки, ни ударов на сменах сцен. Где в кадре ничего не делают, тишина.
 
 // Печать: по щелчку на каждую появившуюся букву.
 function typing(scene, start, count, framesPerChar, gain) {
   for (let i = 1; i <= count; i++) {
-    place(keyClick(), at(scene, start + i * framesPerChar), { gain: 1.3 * gain * between(0.75, 1.1), pan: between(-0.15, 0.15), reverb: 0.08 })
+    place(keyClick(), at(scene, start + i * framesPerChar), { gain: gain * between(0.7, 1), pan: between(-0.1, 0.1), reverb: 0.04 })
   }
 }
 
-// 1. git commit -m "доделаю на выходных"
-typing('cold', 10, 35, 1, 0.3)
-place(thud(150), at('cold', 48), { gain: 0.18, reverb: 0.1 })
-place(normalize(shape(tone(1.6, () => 98), hit(0.02, 0.5))), at('cold', 58), { gain: 0.22, reverb: 0.4 })
+// 1. git commit -m "доделаю на выходных" и Enter.
+typing('cold', 10, 35, 1, 0.14)
+place(keyClick(1.8), at('cold', 48), { gain: 0.2, reverb: 0.06 })
 
-// 2. Стена мёртвых репозиториев. «Похоронить» — удар, карточки падают.
-place(whoosh(0.9, 200, 2600), at('wall', 0) - 0.3, { gain: 0.3, pan: -0.3, reverb: 0.25 })
-place(whoosh(0.5, 900, 3500, 1.2), at('wall', 8), { gain: 0.12, pan: -0.2 })
-place(whoosh(0.5, 900, 3500, 1.2), at('wall', 16), { gain: 0.12, pan: 0.2 })
-place(whoosh(0.45, 3000, 800), at('wall', 94), { gain: 0.1 })
-place(whoosh(0.45, 900, 3000), at('wall', 106), { gain: 0.1 })
-place(boom(46, 2.8), at('wall', 112), { gain: 0.9, reverb: 0.35 })
-place(rumble(1.8, 140), at('wall', 112), { gain: 0.45 })
-for (let i = 0; i < 12; i++) {
-  place(thud(between(55, 95)), at('wall', 112 + 30 + between(0, 18)), { gain: between(0.1, 0.2), pan: between(-0.6, 0.6), reverb: 0.25 })
-}
-place(riser(1.2), at('logo', 0) - 1.2, { gain: 0.4, reverb: 0.2 })
+// 3. Логотип печатается.
+typing('logo', 12, 12, 1.2, 0.12)
 
-// 3. Логотип: удар, колокольчик, мерцание.
-place(boom(52, 3), at('logo', 0), { gain: 0.85, reverb: 0.4 })
-place(bell(520, 4), at('logo', 0), { gain: 0.3, reverb: 0.6 })
-place(shimmer(2.2), at('logo', 2), { gain: 0.1, reverb: 0.6 })
-typing('logo', 12, 12, 1.2, 0.22)
-place(whoosh(0.5, 1200, 4000, 1.4), at('logo', 36), { gain: 0.08 })
+// 4. Сайт: курсор кликает и печатает (см. scenes/Demo.tsx).
+place(mouseClick(), at('demo', 62), { gain: 0.24, pan: -0.2 })
+typing('demo', 68, 26, 1.1, 0.12)
+place(mouseClick(), at('demo', 160), { gain: 0.24, pan: -0.1 })
+typing('demo', 168, 32, 0.95, 0.1)
+place(mouseClick(), at('demo', 212), { gain: 0.28 })
 
-// 4. Сайт: окно влетает, камера ездит, курсор печатает и кликает (см. scenes/Demo.tsx).
-place(whoosh(1, 150, 2200), at('demo', 0) - 0.2, { gain: 0.35, pan: 0.4, reverb: 0.25 })
-place(thud(120), at('demo', 20), { gain: 0.14, reverb: 0.2 })
-for (const [frame, from, to] of [[45, 300, 1800], [112, 1800, 300], [142, 300, 1800], [198, 400, 2000]]) {
-  place(whoosh(0.8, from, to), at('demo', frame), { gain: 0.14, reverb: 0.2 })
-}
-place(mouseClick(), at('demo', 62), { gain: 0.4, pan: -0.2 })
-typing('demo', 68, 26, 1.1, 0.22)
-place(blip([880, 1320]), at('demo', 106), { gain: 0.2, reverb: 0.3 })
-place(shimmer(0.8), at('demo', 116), { gain: 0.06, pan: 0.4, reverb: 0.5 })
-place(mouseClick(), at('demo', 160), { gain: 0.4, pan: -0.1 })
-place(pop(700), at('demo', 160), { gain: 0.1 })
-typing('demo', 168, 32, 0.95, 0.18)
-place(mouseClick(), at('demo', 212), { gain: 0.45 })
-place(boom(44, 3.2), at('demo', 214), { gain: 0.7, reverb: 0.45 })
-
-// 5. Похороны (см. scenes/Funeral.tsx).
-place(thud(62), at('funeral', 30), { gain: 0.8, reverb: 0.3 })
-place(grind(2.3), at('funeral', 56), { gain: 0.3, reverb: 0.2 })
-place(rumble(2.4, 120), at('funeral', 56), { gain: 0.45 })
-place(normalize(shape(filter(noise(0.9), 'lowpass', 1400), arc(0.9))), at('funeral', 122), { gain: 0.12, reverb: 0.2 })
+// 5. Похороны (см. scenes/Funeral.tsx): гроб встаёт, опускается, земля, камень, резец.
+place(knock(), at('funeral', 30), { gain: 0.45, reverb: 0.15 })
+place(grind(2.3), at('funeral', 56), { gain: 0.16, reverb: 0.1 })
+place(pour(0.9), at('funeral', 122), { gain: 0.1, reverb: 0.1 })
 for (let i = 0; i < 26; i++) {
   const land = 122 + ((i * 13) % 26) * 1.05 + 20
   const x = 70 + ((i * 97) % 300)
-  place(dirtHit(), at('funeral', land), { gain: between(0.14, 0.26), pan: (x - 220) / 400, reverb: 0.15 })
+  place(dirtHit(), at('funeral', land), { gain: between(0.07, 0.13), pan: (x - 220) / 400, reverb: 0.1 })
 }
-place(grind(1.5), at('funeral', 152), { gain: 0.4, reverb: 0.25 })
-place(rumble(1.6, 110), at('funeral', 152), { gain: 0.55 })
-place(thud(55), at('funeral', 194), { gain: 0.55, reverb: 0.35 })
-place(shimmer(1.6), at('funeral', 186), { gain: 0.07, reverb: 0.6 })
-for (let i = 0; i < 11; i++) place(chisel(), at('funeral', 190 + i * 1.4), { gain: 0.1, pan: between(-0.1, 0.1), reverb: 0.3 })
-place(bell(190, 7), at('funeral', 196), { gain: 0.55, reverb: 0.7 })
+place(grind(1.5), at('funeral', 152), { gain: 0.22, reverb: 0.15 })
+for (let i = 0; i < 11; i++) place(chisel(), at('funeral', 190 + i * 1.4), { gain: 0.1, pan: between(-0.1, 0.1), reverb: 0.2 })
 
-// 6. Свидетельство, телефон со сторис, кнопки.
-place(whoosh(0.9, 250, 3000), at('certificate', 0), { gain: 0.24, reverb: 0.3 })
-place(shimmer(1.8), at('certificate', 4), { gain: 0.11, reverb: 0.6 })
-place(boom(70, 1.5), at('certificate', 4), { gain: 0.3, reverb: 0.3 })
-place(whoosh(0.5, 900, 3500, 1.2), at('certificate', 10), { gain: 0.08 })
-place(whoosh(0.9, 2500, 300), at('certificate', 78), { gain: 0.2, pan: 0.5, reverb: 0.2 })
-;[520, 600, 690, 790, 900].forEach((f, i) => {
-  place(pop(f), at('certificate', 110 + i * 4), { gain: 0.2, pan: -0.4 + i * 0.2, reverb: 0.2 })
-})
-
-// 7. Финал.
-place(boom(40, 3.5), at('outro', 0), { gain: 0.8, reverb: 0.5 })
-place(whoosh(0.6, 900, 3500, 1.2), at('outro', 6), { gain: 0.1, pan: -0.2 })
-place(whoosh(0.6, 900, 3500, 1.2), at('outro', 12), { gain: 0.1, pan: 0.2 })
-typing('outro', 46, 12, 1.1, 0.2)
-place(blip([660]), at('outro', 62), { gain: 0.1, reverb: 0.3 })
-place(bell(260, 5), at('outro', 80), { gain: 0.38, reverb: 0.7 })
-place(pop(880), at('outro', 80), { gain: 0.18 })
-place(boom(55, 2.5), at('outro', 80), { gain: 0.45, reverb: 0.4 })
+// 7. Финал: печатается projectyard>.
+typing('outro', 46, 12, 1.1, 0.12)
 
 // ── Мастер ─────────────────────────────────────────────────────────────
 
@@ -451,9 +284,9 @@ for (let i = 0; i < length; i++) {
   L[i] += wetL[i] * 1.4
   R[i] += wetR[i] * 1.4
 }
-// Срезаем инфранизкие частоты: бурый шум даёт медленный дрейф, который только гудит в динамиках.
-const cleanL = filter(L, 'highpass', 25)
-const cleanR = filter(R, 'highpass', 25)
+// Срезаем низ: бурый шум в скрежете даёт медленный дрейф, который только гудит в динамиках.
+const cleanL = filter(L, 'highpass', 60)
+const cleanR = filter(R, 'highpass', 60)
 const outL = new Float32Array(length)
 const outR = new Float32Array(length)
 const fadeOut = 0.8
@@ -465,7 +298,8 @@ for (let i = 0; i < length; i++) {
 }
 let peak = 0
 for (let i = 0; i < length; i++) peak = Math.max(peak, Math.abs(outL[i]), Math.abs(outR[i]))
-const gain = 0.89 / peak
+// Пик на −3 дБ: звук редкий и тихий, громче нормализовать незачем.
+const gain = 0.7 / peak
 
 const data = Buffer.alloc(44 + length * 4)
 data.write('RIFF', 0)
