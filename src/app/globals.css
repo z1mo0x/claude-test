@@ -73,7 +73,7 @@ body {
 
 /* Неровный край земли над могилой. */
 .soil {
-  background: linear-gradient(180deg, #1a201c 0%, #0d110f 45%, var(--color-ground) 100%);
+  background: linear-gradient(180deg, #1a201c 0%, #0d110f 35%, #070a0b 60%, rgb(3 7 8 / 0) 100%);
   clip-path: polygon(0 7px, 9% 2px, 21% 8px, 34% 1px, 50% 6px, 63% 1px, 78% 8px, 90% 3px, 100% 6px, 100% 100%, 0 100%);
   mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
 }

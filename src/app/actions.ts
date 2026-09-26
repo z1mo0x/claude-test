@@ -11,13 +11,24 @@ import { getStore } from '@/lib/store'
 
 export type LookupResult =
   | { ok: true; repo: RepoFacts; buriedPath: string | null }
-  | { ok: false; error: LookupError }
+  | { ok: false; error: LookupError | 'storage' }
+
+async function findExisting(owner: string, name: string) {
+  try {
+    return { ok: true as const, grave: await getStore().find(slugOf(owner, name)) }
+  } catch (error) {
+    console.error('Хранилище недоступно', error)
+    return { ok: false as const, error: 'storage' as const }
+  }
+}
 
 export async function lookup(link: string): Promise<LookupResult> {
   const parsed = parseRepoLink(String(link))
   if (!parsed) return { ok: false, error: 'invalid' }
 
-  const existing = await getStore().find(slugOf(parsed.owner, parsed.name))
+  const found = await findExisting(parsed.owner, parsed.name)
+  if (!found.ok) return found
+  const existing = found.grave
   if (existing) return { ok: true, repo: existing, buriedPath: gravePath(existing.owner, existing.name) }
 
   const result = await fetchRepo(parsed.owner, parsed.name)
@@ -52,8 +63,9 @@ export async function bury(input: BuryInput): Promise<BuryResult> {
   const epitaph = clean(input.epitaph, EPITAPH_MAX)
   if (!epitaph || !isCause(cause)) return { ok: false, error: 'bad_input' }
 
-  const store = getStore()
-  const existing = await store.find(slugOf(parsed.owner, parsed.name))
+  const found = await findExisting(parsed.owner, parsed.name)
+  if (!found.ok) return found
+  const existing = found.grave
   if (existing) return { ok: true, path: gravePath(existing.owner, existing.name) }
 
   // Данные репозитория берём у GitHub сами, а не из формы.
@@ -62,7 +74,7 @@ export async function bury(input: BuryInput): Promise<BuryResult> {
   const { repo } = result
 
   try {
-    const grave = await store.create({
+    const grave = await getStore().create({
       ...repo,
       slug: slugOf(repo.owner, repo.name),
       cause,

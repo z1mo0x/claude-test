@@ -7,6 +7,7 @@ import { Shuffle } from 'lucide-react'
 import { bury, lookup } from '@/app/actions'
 import { formatSize, type CertificateData } from '@/certificate/types'
 import { defaultVariant, getVariant, variants } from '@/certificate/variants'
+import { webAssets } from '@/certificate/web-assets'
 import { causeLabel, causes, epitaphs, type CauseId } from '@/lib/causes'
 import { EPITAPH_MAX, NAME_MAX } from '@/lib/config'
 import { errorMessages } from '@/lib/errors'
@@ -61,7 +62,7 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
         setFound({ status: 'error', message: errorMessages.invalid })
         return
       }
-      const result = await lookup(link)
+      const result = await lookup(link).catch(() => ({ ok: false as const, error: 'unavailable' as const }))
       if (id !== request.current) return
       if (!result.ok) setFound({ status: 'error', message: errorMessages[result.error] })
       else if (result.buriedPath) setFound({ status: 'buried', repo: result.repo, path: result.buriedPath })
@@ -90,7 +91,7 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
   }
   const certificate = (
     <div className={repo ? undefined : 'opacity-45'}>
-      <CertificateFrame {...formatSize.card}>{getVariant(variant).render(preview, 'card')}</CertificateFrame>
+      <CertificateFrame {...formatSize.card}>{getVariant(variant).render(preview, 'card', webAssets)}</CertificateFrame>
     </div>
   )
 

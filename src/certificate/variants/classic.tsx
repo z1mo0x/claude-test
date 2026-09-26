@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { daysBetween, formatDate, lifetime } from '@/lib/format'
-import { Mark, Skull } from '../mark'
-import type { CertificateData, CertificateVariant } from '../types'
+import { Skull } from '../skull'
+import type { CertificateAssets, CertificateData, CertificateVariant } from '../types'
 import { typeface } from '../typography'
 
 const color = {
@@ -140,10 +140,11 @@ function Frames({ width, height, inset }: { width: number; height: number; inset
   )
 }
 
-function Brand({ size }: { size: number }) {
+function Brand({ size, logo }: { size: number; logo: string }) {
+  const height = Math.round(size * 2)
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
-      <Mark size={size * 1.9} />
+      <img src={logo} alt="" width={Math.round((height * 438) / 519)} height={height} />
       <div
         style={{
           display: 'flex',
@@ -158,6 +159,33 @@ function Brand({ size }: { size: number }) {
         PROJECTYARD
       </div>
     </div>
+  )
+}
+
+/** Фото кладбища из основного Projectyard, приглушённое под текст. */
+function Backdrop({ src, width, height, opacity }: { src: string; width: number; height: number; opacity: number }) {
+  return (
+    <>
+      <img
+        src={src}
+        alt=""
+        width={width}
+        height={height}
+        style={{ position: 'absolute', left: 0, top: 0, width, height, objectFit: 'cover', opacity }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          display: 'flex',
+          left: 0,
+          top: 0,
+          width,
+          height,
+          backgroundImage:
+            'radial-gradient(circle at 50% 0%, rgba(120,184,90,0.1), rgba(3,7,8,0) 55%), linear-gradient(180deg, rgba(3,7,8,0.3), rgba(3,7,8,0.7))',
+        }}
+      />
+    </>
   )
 }
 
@@ -233,7 +261,7 @@ function Cause({ d, scale, marginTop }: { d: CertificateData; scale: number; mar
   )
 }
 
-function Card({ d }: { d: CertificateData }) {
+function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) {
   const f = facts(d)
   return (
     <div
@@ -244,12 +272,11 @@ function Card({ d }: { d: CertificateData }) {
         height: 630,
         overflow: 'hidden',
         backgroundColor: color.ground,
-        backgroundImage:
-          'radial-gradient(circle at 50% 0%, rgba(120,184,90,0.1), rgba(3,7,8,0) 55%), radial-gradient(circle at 50% 130%, rgba(70,84,78,0.35), rgba(3,7,8,0) 60%)',
         color: color.ink,
         fontFamily: sans,
       }}
     >
+      <Backdrop src={assets.backdrop} width={1200} height={630} opacity={0.85} />
       <Frames width={1200} height={630} inset={22} />
       <Seal size={124} style={{ right: 60, bottom: 30, opacity: 0.7 }} />
 
@@ -266,7 +293,7 @@ function Card({ d }: { d: CertificateData }) {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Brand size={15} />
+          <Brand size={15} logo={assets.logo} />
           <div style={{ display: 'flex', fontFamily: mono, fontSize: 14, color: color.muted }}>
             {`№ ${d.plot} · выдано ${f.issued}`}
           </div>
@@ -358,7 +385,7 @@ function Card({ d }: { d: CertificateData }) {
   )
 }
 
-function Story({ d }: { d: CertificateData }) {
+function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets }) {
   const f = facts(d)
   return (
     <div
@@ -369,12 +396,11 @@ function Story({ d }: { d: CertificateData }) {
         height: 1920,
         overflow: 'hidden',
         backgroundColor: color.ground,
-        backgroundImage:
-          'radial-gradient(circle at 50% 18%, rgba(120,184,90,0.12), rgba(3,7,8,0) 45%), radial-gradient(circle at 50% 110%, rgba(70,84,78,0.4), rgba(3,7,8,0) 55%)',
         color: color.ink,
         fontFamily: sans,
       }}
     >
+      <Backdrop src={assets.backdrop} width={1080} height={1920} opacity={0.9} />
       <Frames width={1080} height={1920} inset={36} />
       <Seal size={190} style={{ right: 72, bottom: 104, opacity: 0.6 }} />
 
@@ -391,7 +417,7 @@ function Story({ d }: { d: CertificateData }) {
           alignItems: 'center',
         }}
       >
-        <Brand size={26} />
+        <Brand size={26} logo={assets.logo} />
         <div style={{ display: 'flex', marginTop: 18, fontFamily: mono, fontSize: 24, color: color.muted }}>
           {`№ ${d.plot} · выдано ${f.issued}`}
         </div>
@@ -498,5 +524,6 @@ function Story({ d }: { d: CertificateData }) {
 export const classic: CertificateVariant = {
   id: 'classic',
   title: 'Классическое',
-  render: (data, format) => (format === 'story' ? <Story d={data} /> : <Card d={data} />),
+  render: (data, format, assets) =>
+    format === 'story' ? <Story d={data} assets={assets} /> : <Card d={data} assets={assets} />,
 }

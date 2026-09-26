@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowRight } from 'lucide-react'
 import { formatSize, type CertificateData } from '@/certificate/types'
 import { getVariant } from '@/certificate/variants'
+import { webAssets } from '@/certificate/web-assets'
 import { CertificateFrame } from './certificate-frame'
 import { GraveyardAir } from './graveyard-air'
 import { SharePanel } from './share-panel'
@@ -53,10 +54,10 @@ export function GraveView({ data, variant, path, url, post, fresh }: Props) {
         >
           {/* На узком экране карточка 1200×630 нечитаема, там показываем вертикальное свидетельство. */}
           <div className="hidden md:block">
-            <CertificateFrame {...formatSize.card}>{render(data, 'card')}</CertificateFrame>
+            <CertificateFrame {...formatSize.card}>{render(data, 'card', webAssets)}</CertificateFrame>
           </div>
           <div className="md:hidden">
-            <CertificateFrame {...formatSize.story}>{render(data, 'story')}</CertificateFrame>
+            <CertificateFrame {...formatSize.story}>{render(data, 'story', webAssets)}</CertificateFrame>
           </div>
           <figcaption className="sr-only">
             Свидетельство о смерти репозитория {data.owner}/{data.name}. Причина: {data.cause}. Эпитафия: {data.epitaph}

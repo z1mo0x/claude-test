@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react'
 import type { BuryResult } from '@/app/actions'
@@ -151,7 +152,8 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       exit={{ opacity: 0, transition: { duration: 0.4 } }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(120,184,90,0.07),rgba(3,7,8,0)_60%)]" />
+      <Image src="/images/graveyard.png" alt="" fill sizes="100vw" className="object-cover opacity-50" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_60%,rgba(120,184,90,0.08),rgba(3,7,8,0.6)_70%)]" />
       <GraveyardAir />
 
       <p className="absolute top-8 font-mono text-[13px] text-muted">
@@ -164,7 +166,8 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
             <motion.div
               animate={step === 'lowering' && !reduced ? { x: [0, -1.2, 1, -0.8, 0.6, 0] } : { x: 0 }}
               transition={step === 'lowering' ? { duration: 0.35, repeat: Infinity } : { duration: 0.2 }}
-              className="flex flex-col gap-2 rounded-xl border border-white/14 bg-[linear-gradient(180deg,#1b2224,#0f1517)] px-6 py-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
+              className="flex flex-col gap-2 rounded-xl border border-white/14 bg-cover px-6 py-5 shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
+              style={{ backgroundImage: 'linear-gradient(180deg, rgba(27,34,36,0.5), rgba(10,14,15,0.85)), url(/images/stone.webp)' }}
             >
               <span className="font-mono text-[12px] text-muted">{repo.owner} /</span>
               <span className="font-serif text-[30px] leading-none font-bold break-all text-bone">{repo.name}</span>
@@ -176,7 +179,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
           </motion.div>
         </div>
 
-        <div className="soil absolute -inset-x-1/3 top-[200px] bottom-0" />
+        <div className="soil absolute -inset-x-1/3 top-[200px] -bottom-32" />
       </div>
 
       {/* Всё глохнет: размываем фон, в фокусе остаётся только надгробие. */}
@@ -189,26 +192,19 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
 
       <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center">
         <div className="relative h-[330px] w-full max-w-[440px]">
+          {/* Надгробие из основного Projectyard. Справа на исходнике артефакт, поэтому показываем только сам камень. */}
           <motion.div
-            className="absolute top-[170px] left-1/2 h-[56px] w-[340px] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(ellipse_at_50%_35%,#232a25,#0d110f_70%)]"
-            style={{ originY: 1 }}
-            initial={{ scaleY: 0, opacity: 0 }}
-            animate={reached('burying') ? { scaleY: 1, opacity: 1 } : { scaleY: 0, opacity: 0 }}
-            transition={{ duration: reduced ? 0.2 : 1, ease: 'easeOut' }}
-          />
-          <motion.div
-            className="absolute top-[-34px] left-1/2 flex w-[210px] -translate-x-1/2 flex-col items-center"
+            className="absolute top-[-128px] left-1/2 h-[389px] w-[334px] -translate-x-1/2 overflow-hidden [mask-image:radial-gradient(ellipse_52%_50%_at_50%_48%,#000_72%,transparent_100%)]"
             initial={{ opacity: 0, y: reduced ? 0 : 24 }}
             animate={reached('burying') ? { opacity: 1, y: 0 } : { opacity: 0, y: reduced ? 0 : 24 }}
             transition={{ duration: reduced ? 0.3 : 1.2, delay: reduced ? 0 : 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex h-[210px] w-full flex-col items-center justify-center gap-2 rounded-t-[105px] rounded-b-md border border-white/12 bg-[linear-gradient(180deg,#2a302f,#171c1c_60%,#111515)] px-5 pt-6 text-center shadow-[0_24px_50px_rgba(0,0,0,0.6)]">
-              <span className="glow font-mono text-[18px] font-bold text-moss">{'{ }'}</span>
-              <span className="font-serif text-[13px] font-bold tracking-[0.3em] text-muted">R.I.P.</span>
+            <Image src="/images/tombstone.png" alt="" width={584} height={389} className="absolute top-0 left-[-122px] max-w-none" />
+            <div className="absolute top-[104px] left-[76px] flex h-[180px] w-[190px] flex-col items-center justify-center gap-2 text-center">
+              <span className="font-serif text-[12px] font-bold tracking-[0.3em] text-muted">R.I.P.</span>
               <span className="font-serif text-[24px] leading-none font-bold break-all text-bone">{repo.name}</span>
-              <span className="font-serif text-[17px] font-semibold text-ink">{years}</span>
+              <span className="font-serif text-[16px] font-semibold text-ink">{years}</span>
             </div>
-            <div className="h-3 w-[240px] rounded-sm bg-[#1d2322]" />
           </motion.div>
         </div>
         {/* Та же высота, что у подписи ниже: так сцена и надгробие совпадают по вертикали. */}

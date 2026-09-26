@@ -25,6 +25,12 @@ export type CertificateData = {
   site: string
 }
 
+/** Картинки свидетельства: на странице это обычные URL, в PNG — data URI (см. server-assets.ts). */
+export type CertificateAssets = {
+  logo: string
+  backdrop: string
+}
+
 /**
  * Вариант оформления свидетельства. Один и тот же render рисует свидетельство
  * на странице (обычный React) и в PNG (next/og, Satori). Поэтому в разметке
@@ -34,5 +40,5 @@ export type CertificateData = {
 export type CertificateVariant = {
   id: string
   title: string
-  render: (data: CertificateData, format: CertificateFormat) => ReactElement
+  render: (data: CertificateData, format: CertificateFormat, assets: CertificateAssets) => ReactElement
 }
