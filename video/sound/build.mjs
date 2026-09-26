@@ -271,22 +271,12 @@ for (const scene of Object.keys(starts).slice(1)) {
   centred(whoosh(0.8, 350, 1600), at(scene, timeline.transition / 2), { gain: 0.05, reverb: 0.2 })
 }
 
-// Появление текста: слова выезжают за 6–8 кадров, середина свиста чуть позже старта.
+// Появление текста: только там, где перед ним не было смены сцены. Текст сразу после перехода
+// уже озвучен переходом, соседние строки — одним свистом, мелкие подписи без свиста.
 const text = [
   ['cold', 58],
-  ['wall', 8],
-  ['wall', 16],
   ['wall', 106],
-  ['wall', 112],
   ['logo', 36],
-  ['funeral', 22],
-  ['funeral', 58],
-  ['funeral', 126],
-  ['certificate', 10],
-  ['certificate', 30],
-  ['outro', 6],
-  ['outro', 12],
-  ['outro', 62],
   ['outro', 80],
 ]
 text.forEach(([scene, frame], i) => {
