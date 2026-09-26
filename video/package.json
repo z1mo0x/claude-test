@@ -1,0 +1,22 @@
+{
+  "name": "projectyard-video",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "sound": "node sound/build.mjs",
+    "studio": "npm run sound && remotion studio src/index.ts",
+    "render": "npm run sound && remotion render src/index.ts Launch out/projectyard-launch.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.529",
+    "@remotion/transitions": "^4.0.529",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "~6.0.2"
+  }
+}
