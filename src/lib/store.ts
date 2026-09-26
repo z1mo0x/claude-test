@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
 import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import type { CauseId } from './causes'
@@ -17,6 +15,12 @@ export type Grave = RepoFacts & {
 }
 
 export type NewGrave = Omit<Grave, 'id' | 'createdAt'>
+
+/** Всё, что нужно свидетельству. Без базы именно это едет в ссылке (см. grave-token.ts). */
+export type CertificateSource = Pick<
+  Grave,
+  'id' | 'owner' | 'name' | 'language' | 'bornAt' | 'diedAt' | 'commits' | 'lastWords' | 'cause' | 'epitaph' | 'buriedBy' | 'variant' | 'createdAt'
+>
 
 export interface GraveStore {
   count(): Promise<number>
@@ -128,50 +132,19 @@ function supabaseStore(url: string, key: string): GraveStore {
   }
 }
 
-/** Для локальной разработки без Supabase. */
-function fileStore(path: string): GraveStore {
-  async function all(): Promise<Grave[]> {
-    try {
-      return JSON.parse(await readFile(path, 'utf8'))
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
-      throw error
-    }
-  }
+let store: GraveStore | null | undefined
 
-  return {
-    async count() {
-      return (await all()).length
-    },
-    async find(slug) {
-      return (await all()).find((g) => g.slug === slug) ?? null
-    },
-    async create(input) {
-      const graves = await all()
-      const existing = graves.find((g) => g.slug === input.slug)
-      if (existing) return existing
-      const grave: Grave = { ...input, id: graves.length + 1, createdAt: new Date().toISOString() }
-      await mkdir(dirname(path), { recursive: true })
-      await writeFile(path, JSON.stringify([...graves, grave], null, 2))
-      return grave
-    },
-  }
-}
-
-let store: GraveStore | undefined
-
-export function getStore(): GraveStore {
-  if (store) return store
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GRAVES_FILE, NODE_ENV } = process.env
-  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-    store = supabaseStore(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  } else if (GRAVES_FILE || NODE_ENV === 'development') {
-    store = fileStore(GRAVES_FILE || '.data/graves.json')
-  } else {
-    throw new Error('Не заданы SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY')
-  }
+/**
+ * Supabase, если заданы ключи. Без них база не нужна: свидетельство живёт
+ * в самой ссылке, а счётчик считает похороны в браузере.
+ */
+export function getStore(): GraveStore | null {
+  if (store !== undefined) return store
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env
+  store = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY ? supabaseStore(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) : null
   return store
 }
 
-export const countGraves = cache(() => getStore().count())
-export const findGrave = cache((slug: string) => getStore().find(slug))
+/** null — база не подключена. */
+export const countGraves = cache(async () => getStore()?.count() ?? null)
+export const findGrave = cache(async (slug: string) => (await getStore()?.find(slug)) ?? null)

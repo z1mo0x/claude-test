@@ -96,7 +96,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       .then(([result]) => {
         if (!active) return
         if (result.ok) {
-          router.push(`${result.path}?buried=1`)
+          router.push(`${result.href}${result.href.includes('?') ? '&' : '?'}buried=1`)
         } else {
           setError(errorMessages[result.error])
           setStep('failed')

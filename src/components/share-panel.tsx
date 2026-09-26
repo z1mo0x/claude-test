@@ -8,6 +8,8 @@ type Props = {
   url: string
   post: string
   imagePath: string
+  /** d=… без базы, иначе пусто. */
+  imageQuery: string
   fileName: string
   /** Кнопка «Поделиться» слегка покачивается, чтобы её заметили сразу после похорон. */
   breathe: boolean
@@ -16,8 +18,12 @@ type Props = {
 const secondary =
   'flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/14 px-4 text-[14px] font-semibold transition-colors hover:border-white/30'
 
-export function SharePanel({ url, post, imagePath, fileName, breathe }: Props) {
+export function SharePanel({ url, post, imagePath, imageQuery, fileName, breathe }: Props) {
   const reduced = useReducedMotion()
+  const image = (...params: string[]) => {
+    const query = [imageQuery, ...params].filter(Boolean).join('&')
+    return query ? `${imagePath}?${query}` : imagePath
+  }
   const [text, setText] = useState(post)
   const [copied, setCopied] = useState<'link' | 'post' | null>(null)
   const [native, setNative] = useState(false)
@@ -38,7 +44,7 @@ export function SharePanel({ url, post, imagePath, fileName, breathe }: Props) {
       return
     }
     try {
-      const response = await fetch(`${imagePath}?format=story`)
+      const response = await fetch(image('format=story'))
       const file = new File([await response.blob()], `${fileName}-story.png`, { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text: `${text}\n${url}` })
@@ -105,18 +111,18 @@ export function SharePanel({ url, post, imagePath, fileName, breathe }: Props) {
 
       <div className="flex flex-col gap-5 md:items-start">
         <img
-          src={`${imagePath}?format=story`}
+          src={image('format=story')}
           alt="Свидетельство для сторис"
           width={1080}
           height={1920}
           className="hidden h-auto w-[150px] rounded-lg border border-white/10 bg-ground md:block"
         />
         <div className="flex flex-wrap gap-2.5 md:flex-col">
-          <a href={`${imagePath}?format=story&download`} download className={secondary}>
+          <a href={image('format=story', 'download')} download className={secondary}>
             <Download size={16} aria-hidden="true" />
             Для сторис
           </a>
-          <a href={`${imagePath}?download`} download className={secondary}>
+          <a href={image('download')} download className={secondary}>
             <Download size={16} aria-hidden="true" />
             PNG 1200×630
           </a>
