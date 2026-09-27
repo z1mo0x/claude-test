@@ -1,3 +1,6 @@
+// Здесь читается секретный ключ Supabase. server-only ломает сборку, если файл когда-нибудь
+// попадёт в код для браузера.
+import 'server-only'
 import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import type { CauseId } from './causes'
