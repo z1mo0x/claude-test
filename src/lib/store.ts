@@ -30,6 +30,8 @@ export interface GraveStore {
   find(slug: string): Promise<Grave | null>
   /** Если репозиторий уже похоронен, возвращает существующую могилу. */
   create(grave: NewGrave): Promise<Grave>
+  /** Для /api/health: база отвечает, ключ подходит, колонки из последней миграции на месте. */
+  check(): Promise<void>
 }
 
 /** Метка строк в таблице projects, которые пришли с этой страницы. */
@@ -126,6 +128,10 @@ function supabaseStore(url: string, key: string): GraveStore {
       return count ?? 0
     },
     find: (slug) => findBy('slug', slug),
+    async check() {
+      const { error } = await db.from('projects').select('id, slug, repo_id, topics, license').limit(1)
+      if (error) throw error
+    },
     async create(grave) {
       const { data, error } = await db.from('projects').insert(toRow(grave)).select('*').single()
       // 23505 — такой репозиторий уже лежит. Ищем по id с GitHub: после переименования
