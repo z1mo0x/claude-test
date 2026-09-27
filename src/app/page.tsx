@@ -6,8 +6,6 @@ import { countGraves } from '@/lib/store'
 export default async function Home() {
   await connection()
   const count = await countGraves().catch(() => 0)
-  // Без базы номер участка знает только браузер, форма посчитает его сама.
-  const nextPlot = count === null ? null : count + 1
 
   return (
     <main>
@@ -38,7 +36,7 @@ export default async function Home() {
       </section>
 
       <div className="mx-auto max-w-page px-4 pb-24 md:px-8">
-        <BuryForm nextPlot={nextPlot} />
+        <BuryForm nextPlot={count + 1} />
       </div>
     </main>
   )

@@ -8,8 +8,6 @@ type Props = {
   url: string
   post: string
   imagePath: string
-  /** d=… без базы, иначе пусто. */
-  imageQuery: string
   fileName: string
 }
 
@@ -18,12 +16,12 @@ type Props = {
  * для сторис, на компьютере — наш попап: системное меню там бедное, а в соцсети удобнее
  * по прямым ссылкам.
  */
-export function SharePanel({ url, post, imagePath, imageQuery, fileName }: Props) {
+export function SharePanel({ url, post, imagePath, fileName }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [native, setNative] = useState(false)
   const [story, setStory] = useState<File | null>(null)
   const [copied, setCopied] = useState(false)
-  const storyUrl = imageUrl(imagePath, imageQuery, 'format=story')
+  const storyUrl = imageUrl(imagePath, 'format=story')
 
   useEffect(() => {
     if (!window.matchMedia('(pointer: coarse)').matches || typeof navigator.share !== 'function') return
@@ -82,19 +80,19 @@ export function SharePanel({ url, post, imagePath, imageQuery, fileName }: Props
           <span className="sr-only md:not-sr-only">{copied ? 'Скопировано' : 'Ссылка'}</span>
         </button>
         <a
-          href={imageUrl(imagePath, imageQuery, 'format=story', 'download')}
+          href={imageUrl(imagePath, 'format=story', 'download')}
           download
           aria-label="Скачать свидетельство для сторис"
           className={`${secondary} min-h-12 min-w-12 px-0 md:hidden`}
         >
           <Download size={16} aria-hidden="true" />
         </a>
-        <a href={imageUrl(imagePath, imageQuery, 'download')} download className={`${secondary} hidden min-h-12 md:flex`}>
+        <a href={imageUrl(imagePath, 'download')} download className={`${secondary} hidden min-h-12 md:flex`}>
           <Download size={16} aria-hidden="true" />
           Скачать PNG
         </a>
       </div>
-      <ShareDialog ref={dialog} url={url} post={post} imagePath={imagePath} imageQuery={imageQuery} />
+      <ShareDialog ref={dialog} url={url} post={post} imagePath={imagePath} />
     </>
   )
 }

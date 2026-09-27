@@ -7,8 +7,7 @@ import { GoalCounter } from './goal-counter'
 
 export async function SiteHeader() {
   await connection()
-  // null — база не подключена, тогда счётчик считает похороны в этом браузере.
-  let count: number | null = null
+  let count = 0
   let failed = false
   try {
     count = await countGraves()

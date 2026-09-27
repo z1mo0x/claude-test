@@ -73,6 +73,7 @@ function Divider({ width, diamond }: { width: number; diamond: number }) {
 function Seal({ size, style }: { size: number; style: CSSProperties }) {
   return (
     <div
+      data-reveal="seal"
       style={{
         position: 'absolute',
         display: 'flex',
@@ -140,10 +141,10 @@ function Frames({ width, height, inset }: { width: number; height: number; inset
   )
 }
 
-function Brand({ size, logo }: { size: number; logo: string }) {
+function Brand({ size, logo, reveal }: { size: number; logo: string; reveal?: string }) {
   const height = Math.round(size * 2)
   return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
+    <div data-reveal={reveal} style={{ display: 'flex', alignItems: 'center' }}>
       <img src={logo} alt="" width={Math.round((height * 438) / 519)} height={height} />
       <div
         style={{
@@ -261,6 +262,10 @@ function Cause({ d, scale, marginTop }: { d: CertificateData; scale: number; mar
   )
 }
 
+/**
+ * data-reveal размечает порядок появления блоков на странице свидетельства (globals.css,
+ * «Появление свидетельства»). Satori эти атрибуты не видит, PNG от них не меняется.
+ */
 function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) {
   const f = facts(d)
   return (
@@ -292,14 +297,14 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
           flexDirection: 'column',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div data-reveal="1" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Brand size={15} logo={assets.logo} />
           <div style={{ display: 'flex', fontFamily: mono, fontSize: 14, color: color.muted }}>
             {`№ ${d.plot} · выдано ${f.issued}`}
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 18 }}>
+        <div data-reveal="2" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 18 }}>
           <div
             style={{
               display: 'flex',
@@ -322,8 +327,9 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
 
         <div style={{ display: 'flex', flexGrow: 1, marginTop: 26 }}>
           <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, flexBasis: 0 }}>
-            <div style={{ display: 'flex', fontFamily: mono, fontSize: 17, color: color.muted }}>{`${d.owner} /`}</div>
+            <div data-reveal="3" style={{ display: 'flex', fontFamily: mono, fontSize: 17, color: color.muted }}>{`${d.owner} /`}</div>
             <div
+              data-reveal="3"
               style={{
                 display: 'flex',
                 marginTop: 2,
@@ -339,6 +345,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
               {f.name}
             </div>
             <div
+              data-reveal="4"
               style={{
                 display: 'flex',
                 marginTop: 14,
@@ -354,6 +361,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
               {`«${d.epitaph}»`}
             </div>
             <div
+              data-reveal="5"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -369,7 +377,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', width: 370, marginLeft: 48 }}>
+          <div data-reveal="6" style={{ display: 'flex', flexDirection: 'column', width: 370, marginLeft: 48 }}>
             <LastWords d={d} f={f} scale={1} />
             <Cause d={d} scale={1} marginTop={14} />
             <div style={{ display: 'flex', marginTop: 14, fontFamily: mono, fontSize: 13, color: color.muted }}>
@@ -417,12 +425,13 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
           alignItems: 'center',
         }}
       >
-        <Brand size={26} logo={assets.logo} />
-        <div style={{ display: 'flex', marginTop: 18, fontFamily: mono, fontSize: 24, color: color.muted }}>
+        <Brand size={26} logo={assets.logo} reveal="1" />
+        <div data-reveal="1" style={{ display: 'flex', marginTop: 18, fontFamily: mono, fontSize: 24, color: color.muted }}>
           {`№ ${d.plot} · выдано ${f.issued}`}
         </div>
 
         <div
+          data-reveal="2"
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -441,12 +450,13 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
           <div style={{ display: 'flex' }}>Свидетельство</div>
           <div style={{ display: 'flex' }}>о смерти</div>
         </div>
-        <div style={{ display: 'flex', marginTop: 28 }}>
+        <div data-reveal="2" style={{ display: 'flex', marginTop: 28 }}>
           <Divider width={520} diamond={14} />
         </div>
 
-        <div style={{ display: 'flex', marginTop: 56, fontFamily: mono, fontSize: 30, color: color.muted }}>{`${d.owner} /`}</div>
+        <div data-reveal="3" style={{ display: 'flex', marginTop: 56, fontFamily: mono, fontSize: 30, color: color.muted }}>{`${d.owner} /`}</div>
         <div
+          data-reveal="3"
           style={{
             display: 'flex',
             marginTop: 6,
@@ -464,6 +474,7 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
           {f.name}
         </div>
         <div
+          data-reveal="4"
           style={{
             display: 'flex',
             marginTop: 30,
@@ -482,6 +493,7 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
         </div>
 
         <div
+          data-reveal="5"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -503,12 +515,12 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
           ))}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', width: 880, marginTop: 12 }}>
+        <div data-reveal="6" style={{ display: 'flex', flexDirection: 'column', width: 880, marginTop: 12 }}>
           <LastWords d={d} f={f} scale={1.7} />
           <Cause d={d} scale={1.7} marginTop={24} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
+        <div data-reveal="6" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
           <div style={{ display: 'flex', fontFamily: sans, fontWeight: 700, fontSize: 34, color: color.ink }}>
             Похорони свой репозиторий
           </div>

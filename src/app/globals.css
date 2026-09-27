@@ -102,7 +102,171 @@ body {
   animation: neon 3.6s ease-in-out infinite;
 }
 
+/*
+ * Появление свидетельства на его странице: блоки проступают по очереди, в конце падает
+ * печать «ПОХОРОНЕН», карточка вздрагивает, от печати расходятся кольцо и пыль.
+ * Порядок размечен data-reveal в src/certificate/variants/*.tsx. --t — когда начать:
+ * после похорон ждём, пока погаснет тёмная шторка. Печать падает, когда grave-view.tsx
+ * добавит класс stamped: сразу после блоков, а на телефоне — когда до неё долистают.
+ */
+@keyframes reveal-block {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+    filter: blur(4px);
+  }
+}
+
+/* scale и opacity отдельными свойствами: наклон печати задан в transform, его не трогаем. */
+@keyframes seal-slam {
+  0% {
+    opacity: 0;
+    scale: 2.6;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  60% {
+    opacity: 1;
+    scale: 0.94;
+    animation-timing-function: ease-out;
+  }
+  80% {
+    scale: 1.04;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@keyframes seal-ring {
+  0% {
+    opacity: 0.9;
+    scale: 0.9;
+  }
+  100% {
+    opacity: 0;
+    scale: 2.4;
+  }
+}
+
+@keyframes seal-dust {
+  0% {
+    opacity: 1;
+    scale: 0.35;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.5;
+  }
+}
+
+@keyframes thump {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 0 4px;
+  }
+  50% {
+    translate: -2px -1px;
+  }
+  75% {
+    translate: 1px 1px;
+  }
+}
+
+.certificate-reveal.stamped {
+  animation: thump 0.4s ease-out 0.27s both;
+}
+
+/* Отдельными свойствами, без animation-delay: задержку задают правила шагов ниже. */
+.certificate-reveal [data-reveal]:not([data-reveal='seal']) {
+  animation-name: reveal-block;
+  animation-duration: 0.7s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.certificate-reveal [data-reveal='1'] {
+  animation-delay: calc(var(--t) + 0.2s);
+}
+.certificate-reveal [data-reveal='2'] {
+  animation-delay: calc(var(--t) + 0.35s);
+}
+.certificate-reveal [data-reveal='3'] {
+  animation-delay: calc(var(--t) + 0.6s);
+}
+.certificate-reveal [data-reveal='4'] {
+  animation-delay: calc(var(--t) + 0.85s);
+}
+.certificate-reveal [data-reveal='5'] {
+  animation-delay: calc(var(--t) + 1.1s);
+}
+.certificate-reveal [data-reveal='6'] {
+  animation-delay: calc(var(--t) + 1.35s);
+}
+
+.certificate-reveal [data-reveal='seal'] {
+  visibility: hidden;
+}
+
+.certificate-reveal.stamped [data-reveal='seal'] {
+  visibility: visible;
+  animation: seal-slam 0.45s both;
+}
+
+/* Кольцо со вспышкой и пыль от удара. До удара и после них не видно. */
+.certificate-reveal [data-reveal='seal']::after,
+.certificate-reveal [data-reveal='seal']::before {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.certificate-reveal.stamped [data-reveal='seal']::after {
+  inset: -6px;
+  border: 2px solid rgb(166 212 122 / 0.8);
+  background: radial-gradient(circle, rgb(166 212 122 / 0.35), rgb(166 212 122 / 0) 65%);
+  animation: seal-ring 0.9s ease-out 0.27s forwards;
+}
+
+.certificate-reveal.stamped [data-reveal='seal']::before {
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  box-shadow:
+    64px 8px 0 2px rgb(166 212 122 / 0.6),
+    67px 43px 0 1px rgb(212 216 207 / 0.55),
+    38px 61px 0 1px rgb(166 212 122 / 0.6),
+    7px 64px 0 2px rgb(212 216 207 / 0.55),
+    -27px 75px 0 1px rgb(166 212 122 / 0.6),
+    -51px 50px 0 1px rgb(212 216 207 / 0.55),
+    -61px 21px 0 2px rgb(166 212 122 / 0.6),
+    -79px -10px 0 1px rgb(212 216 207 / 0.55),
+    -61px -39px 0 1px rgb(166 212 122 / 0.6),
+    -34px -55px 0 2px rgb(212 216 207 / 0.55),
+    -8px -80px 0 1px rgb(166 212 122 / 0.6),
+    24px -68px 0 1px rgb(212 216 207 / 0.55),
+    46px -45px 0 2px rgb(166 212 122 / 0.6),
+    76px -26px 0 1px rgb(212 216 207 / 0.55);
+  animation: seal-dust 0.8s ease-out 0.27s forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* !important: правила анимации выше специфичнее, а здесь их нужно выключить все. */
+  .certificate-reveal,
+  .certificate-reveal [data-reveal],
+  .certificate-reveal [data-reveal]::before,
+  .certificate-reveal [data-reveal]::after {
+    animation: none !important;
+  }
+  .certificate-reveal [data-reveal='seal'] {
+    visibility: visible;
+  }
   .neon {
     animation: none;
     box-shadow: 0 0 24px rgb(120 184 90 / 0.35);

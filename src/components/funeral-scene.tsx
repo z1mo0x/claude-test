@@ -153,7 +153,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       .then(([result]) => {
         if (!active) return
         if (result.ok) {
-          const target = `${result.href}${result.href.includes('?') ? '&' : '?'}buried=1`
+          const target = `${result.href}?buried=1`
           router.prefetch(target)
           setLeaving(target)
         } else {

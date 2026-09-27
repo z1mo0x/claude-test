@@ -19,12 +19,6 @@ export type Grave = RepoFacts & {
 
 export type NewGrave = Omit<Grave, 'id' | 'createdAt'>
 
-/** Всё, что нужно свидетельству. Без базы именно это едет в ссылке (см. grave-token.ts). */
-export type CertificateSource = Pick<
-  Grave,
-  'id' | 'owner' | 'name' | 'language' | 'bornAt' | 'diedAt' | 'commits' | 'lastWords' | 'cause' | 'epitaph' | 'buriedBy' | 'variant' | 'createdAt'
->
-
 export interface GraveStore {
   count(): Promise<number>
   find(slug: string): Promise<Grave | null>
@@ -146,19 +140,18 @@ function supabaseStore(url: string, key: string): GraveStore {
   }
 }
 
-let store: GraveStore | null | undefined
+let store: GraveStore | undefined
 
-/**
- * Supabase, если заданы ключи. Без них база не нужна: свидетельство живёт
- * в самой ссылке, а счётчик считает похороны в браузере.
- */
-export function getStore(): GraveStore | null {
-  if (store !== undefined) return store
+/** Без ключей Supabase сайт не работает: свидетельства живут только в базе. */
+export function getStore(): GraveStore {
+  if (store) return store
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env
-  store = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY ? supabaseStore(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) : null
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Нет SUPABASE_URL или SUPABASE_SERVICE_ROLE_KEY: задай их для этого окружения и пересобери деплой')
+  }
+  store = supabaseStore(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   return store
 }
 
-/** null — база не подключена. */
-export const countGraves = cache(async () => getStore()?.count() ?? null)
-export const findGrave = cache(async (slug: string) => (await getStore()?.find(slug)) ?? null)
+export const countGraves = cache(async () => getStore().count())
+export const findGrave = cache(async (slug: string) => getStore().find(slug))

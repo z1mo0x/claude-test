@@ -1,13 +1,14 @@
 import type { NextRequest } from 'next/server'
 import { certificateFromGrave } from '@/certificate/data'
 import { certificateImage } from '@/certificate/image'
-import { resolveGrave } from '@/lib/grave-token'
+import { slugOf } from '@/lib/repo-link'
 import { siteUrl } from '@/lib/site-url'
+import { findGrave } from '@/lib/store'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ owner: string; repo: string }> }) {
   const { owner, repo } = await params
   const search = request.nextUrl.searchParams
-  const grave = await resolveGrave(owner, repo, search.get('d'))
+  const grave = await findGrave(slugOf(owner, repo))
   if (!grave) return new Response('Not found', { status: 404 })
 
   const format = search.get('format') === 'story' ? 'story' : 'card'

@@ -13,9 +13,8 @@ import { EPITAPH_MAX, NAME_MAX } from '@/lib/config'
 import { errorMessages } from '@/lib/errors'
 import { commitsLabel, daysBetween, lifetime, mournerLabel, plotNumber } from '@/lib/format'
 import type { RepoFacts } from '@/lib/github'
-import { localGraves, rememberGrave, useLocalGraveCount } from '@/lib/local-graves'
 import { rememberLogin, savedLogin } from '@/lib/local-profile'
-import { isLinkPrefix, isLogin, linkPrefix, normalizeLogin, parseRepoLink, slugOf } from '@/lib/repo-link'
+import { isLinkPrefix, isLogin, linkPrefix, normalizeLogin, parseRepoLink } from '@/lib/repo-link'
 import { CertificateFrame } from './certificate-frame'
 import { FuneralScene } from './funeral-scene'
 
@@ -39,7 +38,7 @@ function Step({ n, children, htmlFor }: { n: string; children: ReactNode; htmlFo
   )
 }
 
-export function BuryForm({ nextPlot }: { nextPlot: number | null }) {
+export function BuryForm({ nextPlot }: { nextPlot: number }) {
   const [link, setLink] = useState(linkPrefix(null))
   const [found, setFound] = useState<Found>({ status: 'idle' })
   const [cause, setCause] = useState<CauseId>('better')
@@ -51,8 +50,6 @@ export function BuryForm({ nextPlot }: { nextPlot: number | null }) {
   const [today] = useState(() => new Date().toISOString())
   const request = useRef(0)
   const linkInput = useRef<HTMLInputElement>(null)
-  const localCount = useLocalGraveCount()
-  const plot = nextPlot ?? localCount + 1
   const loginValid = isLogin(buriedBy)
 
   // Ник из прошлых похорон: сразу в поле и в заготовку ссылки. Только после загрузки,
@@ -83,9 +80,9 @@ export function BuryForm({ nextPlot }: { nextPlot: number | null }) {
         setFound({ status: 'error', message: errorMessages[result.error] })
         return
       }
-      const buriedHere = localGraves().find((g) => g.slug === slugOf(result.repo.owner, result.repo.name))
-      const href = result.buriedHref ?? buriedHere?.href
-      setFound(href ? { status: 'buried', repo: result.repo, path: href } : { status: 'found', repo: result.repo })
+      setFound(
+        result.buriedHref ? { status: 'buried', repo: result.repo, path: result.buriedHref } : { status: 'found', repo: result.repo },
+      )
     }, 450)
     return () => clearTimeout(timer)
   }, [link])
@@ -104,7 +101,7 @@ export function BuryForm({ nextPlot }: { nextPlot: number | null }) {
     cause: causeLabel(cause),
     epitaph: epitaph.trim() || '…',
     buriedBy: mournerLabel(buriedBy || null),
-    plot: plotNumber(plot),
+    plot: plotNumber(nextPlot),
     issuedAt: today,
     site: '',
   }
@@ -115,13 +112,10 @@ export function BuryForm({ nextPlot }: { nextPlot: number | null }) {
   )
 
   const commit = useCallback(async () => {
-    const result = await bury({ link, cause, epitaph, buriedBy, adoptable, variant, plot })
-    if (result.ok) {
-      rememberGrave({ slug: result.slug, href: result.href })
-      rememberLogin(buriedBy)
-    }
+    const result = await bury({ link, cause, epitaph, buriedBy, adoptable, variant })
+    if (result.ok) rememberLogin(buriedBy)
     return result
-  }, [link, cause, epitaph, buriedBy, adoptable, variant, plot])
+  }, [link, cause, epitaph, buriedBy, adoptable, variant])
   const abort = useCallback(() => setCeremony(false), [])
 
   function submit(event: FormEvent) {
