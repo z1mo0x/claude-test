@@ -24,8 +24,11 @@ export interface GraveStore {
   find(slug: string): Promise<Grave | null>
   /** Если репозиторий уже похоронен, возвращает существующую могилу. */
   create(grave: NewGrave): Promise<Grave>
-  /** Для /api/health: база отвечает, ключ подходит, колонки из последней миграции на месте. */
+  /** Для /api/health: база отвечает, ключ подходит, колонки и таблицы из миграций на месте. */
   check(): Promise<void>
+  /** Сколько похорон было с этого IP (по хешу) после since. */
+  recentBurials(ipHash: string, since: Date): Promise<number>
+  logBurial(ipHash: string): Promise<void>
 }
 
 /** Метка строк в таблице projects, которые пришли с этой страницы. */
@@ -123,7 +126,22 @@ function supabaseStore(url: string, key: string): GraveStore {
     },
     find: (slug) => findBy('slug', slug),
     async check() {
-      const { error } = await db.from('projects').select('id, slug, repo_id, topics, license').limit(1)
+      const projects = await db.from('projects').select('id, slug, repo_id, topics, license').limit(1)
+      if (projects.error) throw projects.error
+      const log = await db.from('bury_log').select('id').limit(1)
+      if (log.error) throw log.error
+    },
+    async recentBurials(ipHash, since) {
+      const { count, error } = await db
+        .from('bury_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('ip_hash', ipHash)
+        .gte('created_at', since.toISOString())
+      if (error) throw error
+      return count ?? 0
+    },
+    async logBurial(ipHash) {
+      const { error } = await db.from('bury_log').insert({ ip_hash: ipHash })
       if (error) throw error
     },
     async create(grave) {

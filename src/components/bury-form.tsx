@@ -15,6 +15,7 @@ import { commitsLabel, daysBetween, lifetime, mournerLabel, plotNumber } from '@
 import type { RepoFacts } from '@/lib/github'
 import { rememberLogin, savedLogin } from '@/lib/local-profile'
 import { isLinkPrefix, isLogin, linkPrefix, normalizeLogin, parseRepoLink } from '@/lib/repo-link'
+import { BotCheck, botCheckEnabled } from './bot-check'
 import { CertificateFrame } from './certificate-frame'
 import { FuneralScene } from './funeral-scene'
 
@@ -45,6 +46,9 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
   const [epitaph, setEpitaph] = useState(epitaphs[0])
   const [buriedBy, setBuriedBy] = useState('')
   const [adoptable, setAdoptable] = useState(false)
+  // Токен Turnstile. Одноразовый: после попытки похорон виджет пересоздаётся (checkRound).
+  const [human, setHuman] = useState('')
+  const [checkRound, setCheckRound] = useState(0)
   const [variant, setVariant] = useState(defaultVariant.id)
   const [ceremony, setCeremony] = useState(false)
   const [today] = useState(() => new Date().toISOString())
@@ -88,7 +92,8 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
   }, [link])
 
   const repo = found.status === 'found' || found.status === 'buried' ? found.repo : null
-  const ready = found.status === 'found' && epitaph.trim().length > 0 && loginValid
+  const checking = botCheckEnabled && !human
+  const ready = found.status === 'found' && epitaph.trim().length > 0 && loginValid && !checking
 
   const preview: CertificateData = {
     owner: repo?.owner ?? 'владелец',
@@ -112,10 +117,12 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
   )
 
   const commit = useCallback(async () => {
-    const result = await bury({ link, cause, epitaph, buriedBy, adoptable, variant })
+    const result = await bury({ link, cause, epitaph, buriedBy, adoptable, variant, human })
     if (result.ok) rememberLogin(buriedBy)
+    setHuman('')
+    setCheckRound((round) => round + 1)
     return result
-  }, [link, cause, epitaph, buriedBy, adoptable, variant])
+  }, [link, cause, epitaph, buriedBy, adoptable, variant, human])
   const abort = useCallback(() => setCeremony(false), [])
 
   function submit(event: FormEvent) {
@@ -326,6 +333,11 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
             Можно передать проект новому хозяину, когда откроется основной Projectyard
           </span>
         </label>
+
+        <BotCheck key={checkRound} onToken={setHuman} />
+        {checking && found.status === 'found' && (
+          <p className="-mb-4 font-mono text-[13px] text-muted">&gt; проверяем, что ты не бот…</p>
+        )}
 
         <button
           type="submit"
