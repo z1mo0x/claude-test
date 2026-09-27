@@ -22,6 +22,8 @@ export async function generateMetadata(): Promise<Metadata> {
       'Кладбище незаконченных пет-проектов. Вставь ссылку на заброшенный репозиторий GitHub, проведи похороны и получи свидетельство о смерти, которым можно поделиться.',
     keywords: ['заброшенный репозиторий', 'пет-проект', 'GitHub', 'свидетельство о смерти', 'кладбище проектов', 'Projectyard'],
     alternates: { canonical: '/' },
+    // Коды подтверждения из Google Search Console и Яндекс Вебмастера (способ «HTML-тег»).
+    verification: { google: process.env.GOOGLE_SITE_VERIFICATION, yandex: process.env.YANDEX_VERIFICATION },
     openGraph: { siteName: 'Projectyard', locale: 'ru_RU', type: 'website' },
     twitter: { card: 'summary_large_image' },
   }
