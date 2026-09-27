@@ -35,17 +35,19 @@ const SOURCE = 'bury'
 type Row = {
   id: number
   created_at: string
+  /** Считает база: lower(repo_owner || '/' || repo_name). */
   slug: string
+  repo_id: number
   repo_owner: string
   repo_name: string
-  repo_url: string
   description: string | null
   language: string | null
+  topics: string[]
+  license: string | null
   stars: number
   born_at: string
   died_at: string | null
   commits: number
-  first_words: string | null
   last_words: string | null
   cause: CauseId
   epitaph: string
@@ -59,16 +61,17 @@ function fromRow(r: Row): Grave {
     id: r.id,
     createdAt: r.created_at,
     slug: r.slug,
+    repoId: r.repo_id,
     owner: r.repo_owner,
     name: r.repo_name,
-    url: r.repo_url,
     description: r.description,
     language: r.language,
+    topics: r.topics,
+    license: r.license,
     stars: r.stars,
     bornAt: r.born_at,
     diedAt: r.died_at,
     commits: r.commits,
-    firstWords: r.first_words,
     lastWords: r.last_words,
     cause: r.cause,
     epitaph: r.epitaph,
@@ -78,19 +81,19 @@ function fromRow(r: Row): Grave {
   }
 }
 
-function toRow(g: NewGrave): Omit<Row, 'id' | 'created_at'> & { source: string } {
+function toRow(g: NewGrave): Omit<Row, 'id' | 'created_at' | 'slug'> & { source: string } {
   return {
-    slug: g.slug,
+    repo_id: g.repoId,
     repo_owner: g.owner,
     repo_name: g.name,
-    repo_url: g.url,
     description: g.description,
     language: g.language,
+    topics: g.topics,
+    license: g.license,
     stars: g.stars,
     born_at: g.bornAt,
     died_at: g.diedAt,
     commits: g.commits,
-    first_words: g.firstWords,
     last_words: g.lastWords,
     cause: g.cause,
     epitaph: g.epitaph,
@@ -104,8 +107,8 @@ function toRow(g: NewGrave): Omit<Row, 'id' | 'created_at'> & { source: string }
 function supabaseStore(url: string, key: string): GraveStore {
   const db = createClient(url, key, { auth: { persistSession: false } })
 
-  async function find(slug: string) {
-    const { data, error } = await db.from('projects').select('*').eq('slug', slug).maybeSingle()
+  async function findBy(column: 'slug' | 'repo_id', value: string | number) {
+    const { data, error } = await db.from('projects').select('*').eq(column, value).maybeSingle()
     if (error) throw error
     return data ? fromRow(data as Row) : null
   }
@@ -119,11 +122,13 @@ function supabaseStore(url: string, key: string): GraveStore {
       if (error) throw error
       return count ?? 0
     },
-    find,
+    find: (slug) => findBy('slug', slug),
     async create(grave) {
       const { data, error } = await db.from('projects').insert(toRow(grave)).select('*').single()
+      // 23505 — такой репозиторий уже лежит. Ищем по id с GitHub: после переименования
+      // owner/name другие, а могила та же.
       if (error?.code === '23505') {
-        const existing = await find(grave.slug)
+        const existing = (await findBy('repo_id', grave.repoId)) ?? (await findBy('slug', grave.slug))
         if (existing) return existing
       }
       if (error) throw error
