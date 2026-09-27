@@ -132,6 +132,8 @@ npx remotion render src/index.ts Launch out/projectyard-launch.mp4 --props='{"si
 
 Сцены: коммит «доделаю на выходных» → стена мёртвых репозиториев → логотип → работа с сайтом (ссылка, причина, эпитафия) → похороны → свидетельство и телефон со сторис → «Каждый проект заслуживает покоя».
 
+Вертикальная версия для TikTok, Reels и Shorts — композиция `Short` (1080×1920, около 18 с, `video/src/timeline-short.json`): `npm run render:short` → `out/projectyard-short.mp4`.
+
 | Что | Где |
 | --- | --- |
 | Тексты и пример репозитория | `video/src/copy.ts` |

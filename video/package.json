@@ -3,9 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "sound": "node sound/build.mjs",
+    "sound": "node sound/build.mjs && node sound/build.mjs short",
     "studio": "npm run sound && remotion studio src/index.ts",
     "render": "npm run sound && remotion render src/index.ts Launch out/projectyard-launch.mp4",
+    "render:short": "npm run sound && remotion render src/index.ts Short out/projectyard-short.mp4",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
