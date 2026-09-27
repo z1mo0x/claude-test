@@ -6,6 +6,7 @@ import { commitsLabel } from '@/lib/format'
 /**
  * Та же сцена, что на сайте (src/components/funeral-scene.tsx), только по кадрам:
  * prep → coffin → lowering → burying → silence. Кадр 440×800, как на сайте, увеличен до высоты видео.
+ * scale — во сколько раз увеличить кадр: 1.3 в горизонтальном ролике, 2.2 в вертикальном.
  */
 const STAGE = { width: 440, height: 800, scale: 1.3 }
 const GROUND = 520
@@ -36,7 +37,7 @@ function captionOpacity(frame: number, from: number, to: number) {
   return interpolate(frame, [from, from + 10, to - 10, to], [0, 1, 1, 0], clamp)
 }
 
-export function Funeral() {
+export function Funeral({ scale = STAGE.scale }: { scale?: number }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -60,7 +61,7 @@ export function Funeral() {
   const emblem = interpolate(frame, [at.engrave - 4, at.engrave + 14, at.engrave + 40], [0, 1, 0.7], clamp)
   const years = `${new Date(sample.bornAt!).getUTCFullYear()} — ${new Date(sample.diedAt!).getUTCFullYear()}`
 
-  const stage = { position: 'relative' as const, width: STAGE.width, height: STAGE.height, transform: `scale(${STAGE.scale}) translate(${shakeX}px, ${shakeY}px)` }
+  const stage = { position: 'relative' as const, width: STAGE.width, height: STAGE.height, transform: `scale(${scale}) translate(${shakeX}px, ${shakeY}px)` }
 
   return (
     <AbsoluteFill style={{ opacity: overlay, backgroundColor: color.ground, overflow: 'hidden' }}>

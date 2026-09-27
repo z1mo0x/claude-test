@@ -1,11 +1,21 @@
 // Звук ролика. Сэмплов нет: всё собрано из шума, синусов, фильтров и ревербератора,
 // поэтому звук можно пересобрать и поправить так же, как анимацию.
 // Тайминги сцен берутся из src/timeline.json, кадры внутри сцен совпадают с src/scenes/*.
-// Запуск: npm run sound → sound/out/soundtrack.wav (48 кГц, стерео).
+// Запуск: node sound/build.mjs → sound/out/soundtrack.wav (ролик Launch, 48 кГц, стерео),
+//         node sound/build.mjs short → sound/out/short.wav (вертикальный Short, src/timeline-short.json).
+// npm run sound собирает обе дорожки.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
-const timeline = JSON.parse(readFileSync(new URL('../src/timeline.json', import.meta.url), 'utf8'))
+const targets = {
+  launch: { timeline: '../src/timeline.json', out: 'soundtrack.wav' },
+  short: { timeline: '../src/timeline-short.json', out: 'short.wav' },
+}
+const name = process.argv[2] ?? 'launch'
+const target = targets[name]
+if (!target) throw new Error(`Нет такой дорожки: ${name}. Есть: ${Object.keys(targets).join(', ')}`)
+
+const timeline = JSON.parse(readFileSync(new URL(target.timeline, import.meta.url), 'utf8'))
 const SR = 48000
 const FPS = timeline.fps
 
@@ -258,6 +268,7 @@ function freeverb(inL, inR, room = 0.86, damp = 0.35) {
 // ── Партитура ──────────────────────────────────────────────────────────
 // Только то, что происходит в кадре: печать, клики, гроб, земля, камень, резец,
 // и тихий свист воздуха, когда появляется текст или меняется сцена. Ни фона, ни музыки, ни ударов.
+// У каждого ролика своя партитура (scores ниже), строительные блоки и похороны общие.
 
 // Печать: по тику на каждую появившуюся букву.
 function typing(scene, start, count, framesPerChar, gain) {
@@ -267,50 +278,91 @@ function typing(scene, start, count, framesPerChar, gain) {
 }
 
 // Смена сцены: переход длится timeline.transition кадров, середина свиста — на середине перехода.
-for (const scene of Object.keys(starts).slice(1)) {
-  centred(whoosh(0.8, 350, 1600), at(scene, timeline.transition / 2), { gain: 0.05, reverb: 0.2 })
+function transitions() {
+  for (const scene of Object.keys(starts).slice(1)) {
+    centred(whoosh(0.8, 350, 1600), at(scene, timeline.transition / 2), { gain: 0.05, reverb: 0.2 })
+  }
 }
 
-// Появление текста: только там, где перед ним не было смены сцены. Текст сразу после перехода
-// уже озвучен переходом, соседние строки — одним свистом, мелкие подписи без свиста.
-const text = [
-  ['cold', 58],
-  ['wall', 106],
-  ['logo', 36],
-  ['outro', 80],
-]
-text.forEach(([scene, frame], i) => {
-  centred(whoosh(0.45, 900, 2600), at(scene, frame + 4), { gain: 0.03, pan: i % 2 ? 0.15 : -0.15, reverb: 0.15 })
-})
-
-// 1. git commit -m "доделаю на выходных" и Enter.
-typing('cold', 10, 35, 1, 0.045)
-place(keyClick(0.75), at('cold', 48), { gain: 0.06, reverb: 0.02 })
-
-// 3. Логотип печатается.
-typing('logo', 12, 12, 1.2, 0.04)
-
-// 4. Сайт: курсор кликает и печатает (см. scenes/Demo.tsx).
-place(mouseClick(), at('demo', 62), { gain: 0.24, pan: -0.2 })
-typing('demo', 68, 26, 1.1, 0.04)
-place(mouseClick(), at('demo', 160), { gain: 0.24, pan: -0.1 })
-typing('demo', 168, 32, 0.95, 0.035)
-place(mouseClick(), at('demo', 212), { gain: 0.28 })
-
-// 5. Похороны (см. scenes/Funeral.tsx): гроб встаёт, опускается, земля, камень, резец.
-place(knock(), at('funeral', 30), { gain: 0.45, reverb: 0.15 })
-place(grind(2.3), at('funeral', 56), { gain: 0.16, reverb: 0.1 })
-place(pour(0.9), at('funeral', 122), { gain: 0.1, reverb: 0.1 })
-for (let i = 0; i < 26; i++) {
-  const land = 122 + ((i * 13) % 26) * 1.05 + 20
-  const x = 70 + ((i * 97) % 300)
-  place(dirtHit(), at('funeral', land), { gain: between(0.07, 0.13), pan: (x - 220) / 400, reverb: 0.1 })
+/** Похороны (см. scenes/Funeral.tsx): гроб встаёт, опускается, земля, камень, резец. Сцена одна на оба ролика. */
+function funeral(scene) {
+  place(knock(), at(scene, 30), { gain: 0.45, reverb: 0.15 })
+  place(grind(2.3), at(scene, 56), { gain: 0.16, reverb: 0.1 })
+  place(pour(0.9), at(scene, 122), { gain: 0.1, reverb: 0.1 })
+  for (let i = 0; i < 26; i++) {
+    const land = 122 + ((i * 13) % 26) * 1.05 + 20
+    const x = 70 + ((i * 97) % 300)
+    place(dirtHit(), at(scene, land), { gain: between(0.07, 0.13), pan: (x - 220) / 400, reverb: 0.1 })
+  }
+  place(grind(1.5), at(scene, 152), { gain: 0.22, reverb: 0.15 })
+  for (let i = 0; i < 11; i++) place(chisel(), at(scene, 190 + i * 1.4), { gain: 0.1, pan: between(-0.1, 0.1), reverb: 0.2 })
 }
-place(grind(1.5), at('funeral', 152), { gain: 0.22, reverb: 0.15 })
-for (let i = 0; i < 11; i++) place(chisel(), at('funeral', 190 + i * 1.4), { gain: 0.1, pan: between(-0.1, 0.1), reverb: 0.2 })
 
-// 7. Финал: печатается projectyard>.
-typing('outro', 46, 12, 1.1, 0.04)
+const scores = {
+  /** Горизонтальный ролик Launch, 1920×1080. */
+  launch() {
+    transitions()
+
+    // Появление текста: только там, где перед ним не было смены сцены. Текст сразу после перехода
+    // уже озвучен переходом, соседние строки — одним свистом, мелкие подписи без свиста.
+    const text = [
+      ['cold', 58],
+      ['wall', 106],
+      ['logo', 36],
+      ['outro', 80],
+    ]
+    text.forEach(([scene, frame], i) => {
+      centred(whoosh(0.45, 900, 2600), at(scene, frame + 4), { gain: 0.03, pan: i % 2 ? 0.15 : -0.15, reverb: 0.15 })
+    })
+
+    // 1. git commit -m "доделаю на выходных" и Enter.
+    typing('cold', 10, 35, 1, 0.045)
+    place(keyClick(0.75), at('cold', 48), { gain: 0.06, reverb: 0.02 })
+
+    // 3. Логотип печатается.
+    typing('logo', 12, 12, 1.2, 0.04)
+
+    // 4. Сайт: курсор кликает и печатает (см. scenes/Demo.tsx).
+    place(mouseClick(), at('demo', 62), { gain: 0.24, pan: -0.2 })
+    typing('demo', 68, 26, 1.1, 0.04)
+    place(mouseClick(), at('demo', 160), { gain: 0.24, pan: -0.1 })
+    typing('demo', 168, 32, 0.95, 0.035)
+    place(mouseClick(), at('demo', 212), { gain: 0.28 })
+
+    // 5. Похороны.
+    funeral('funeral')
+
+    // 7. Финал: печатается projectyard>.
+    typing('outro', 46, 12, 1.1, 0.04)
+  },
+
+  /** Вертикальный Short, 1080×1920 (см. scenes/short/*). */
+  short() {
+    transitions()
+
+    // 1. Крючок (Hook.tsx): коммит печатается крупно, Enter, свист под «Знакомо?».
+    typing('hook', 4, 35, 0.75, 0.04)
+    place(keyClick(0.75), at('hook', 32), { gain: 0.055, reverb: 0.02 })
+    centred(whoosh(0.45, 900, 2600), at('hook', 50), { gain: 0.03, pan: -0.15, reverb: 0.15 })
+
+    // 2. Ссылка (Link.tsx): клик в поле, печать ссылки, клик по «Похоронить».
+    place(mouseClick(), at('link', 12), { gain: 0.22, pan: 0.15 })
+    typing('link', 16, 26, 1, 0.04)
+    place(mouseClick(), at('link', 66), { gain: 0.26, pan: 0.05 })
+
+    // 3. Похороны: та же сцена, что в Launch, и те же кадры.
+    funeral('funeral')
+
+    // 4. Свидетельство (Certificate.tsx, sealImpact): печать бьёт по бумаге.
+    place(knock(), at('certificate', 72), { gain: 0.4, pan: 0.2, reverb: 0.18 })
+
+    // 5. Финал (Outro.tsx): печатается адрес сайта, свист под «Каждый проект заслуживает покоя».
+    typing('outro', 20, 27, 0.8, 0.035)
+    centred(whoosh(0.45, 900, 2600), at('outro', 50), { gain: 0.03, pan: 0.15, reverb: 0.15 })
+  },
+}
+
+scores[name]()
 
 // ── Мастер ─────────────────────────────────────────────────────────────
 
@@ -357,5 +409,5 @@ for (let i = 0; i < length; i++) {
 
 const dir = new URL('./out/', import.meta.url)
 mkdirSync(dir, { recursive: true })
-writeFileSync(new URL('soundtrack.wav', dir), data)
-console.log(`soundtrack.wav: ${duration.toFixed(2)} с, пик до нормализации ${peak.toFixed(2)}`)
+writeFileSync(new URL(target.out, dir), data)
+console.log(`${target.out}: ${duration.toFixed(2)} с, пик до нормализации ${peak.toFixed(2)}`)

@@ -1,9 +1,10 @@
-import { AbsoluteFill, random, useCurrentFrame } from 'remotion'
+import { AbsoluteFill, random, useCurrentFrame, useVideoConfig } from 'remotion'
 import { color } from '../theme'
 
+// Пыль в долях кадра: одна и та же россыпь ложится и на 1920×1080, и на вертикальный 1080×1920.
 const dust = Array.from({ length: 50 }, (_, i) => ({
-  x: random(`x${i}`) * 1920,
-  y: random(`y${i}`) * 1080,
+  x: random(`x${i}`),
+  y: random(`y${i}`),
   size: 1 + random(`s${i}`) * 2.5,
   speed: 0.15 + random(`v${i}`) * 0.5,
   opacity: 0.06 + random(`o${i}`) * 0.18,
@@ -13,6 +14,7 @@ const dust = Array.from({ length: 50 }, (_, i) => ({
 /** Общий фон всего ролика: дыхание тумана, пыль, зерно и виньетка. */
 export function Background() {
   const frame = useCurrentFrame()
+  const { width, height } = useVideoConfig()
   return (
     <AbsoluteFill style={{ backgroundColor: color.ground, overflow: 'hidden' }}>
       <AbsoluteFill
@@ -25,8 +27,8 @@ export function Background() {
           key={i}
           style={{
             position: 'absolute',
-            left: d.x + Math.sin(frame / 40 + d.phase) * 12,
-            top: ((d.y + frame * d.speed) % 1100) - 10,
+            left: d.x * width + Math.sin(frame / 40 + d.phase) * 12,
+            top: ((d.y * height + frame * d.speed) % (height + 20)) - 10,
             width: d.size,
             height: d.size,
             borderRadius: '50%',
@@ -35,7 +37,7 @@ export function Background() {
           }}
         />
       ))}
-      <svg width={1920} height={1080} style={{ position: 'absolute', inset: 0, opacity: 0.08, mixBlendMode: 'overlay' }}>
+      <svg width={width} height={height} style={{ position: 'absolute', inset: 0, opacity: 0.08, mixBlendMode: 'overlay' }}>
         <filter id="grain">
           <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed={frame % 6} stitchTiles="stitch" />
         </filter>
