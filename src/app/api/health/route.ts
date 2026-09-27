@@ -3,18 +3,12 @@ import { getStore } from '@/lib/store'
 
 /**
  * Проверка подключения к базе: открыть /api/health на нужном деплое.
- * Секретов не отдаёт, только видит ли деплой ключи и что ответила база.
+ * Секретов не отдаёт: только текст ошибки, если деплой не видит ключей или база не отвечает.
  */
 export async function GET() {
   await connection()
-  const store = getStore()
-  if (!store) {
-    return Response.json({
-      database: 'off',
-      hint: 'Этот деплой не видит SUPABASE_URL или SUPABASE_SERVICE_ROLE_KEY. Проверь, для какого окружения они заданы, и сделай Redeploy.',
-    })
-  }
   try {
+    const store = getStore()
     await store.check()
     return Response.json({ database: 'ok', graves: await store.count() })
   } catch (error) {

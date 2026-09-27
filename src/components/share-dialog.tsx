@@ -6,9 +6,8 @@ import { Check, Copy, Download, ImageIcon, Link2, X } from 'lucide-react'
 export const secondary =
   'flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/14 bg-ground/60 px-4 text-[14px] font-semibold transition-colors hover:border-white/30'
 
-export function imageUrl(imagePath: string, imageQuery: string, ...params: string[]) {
-  const query = [imageQuery, ...params].filter(Boolean).join('&')
-  return query ? `${imagePath}?${query}` : imagePath
+export function imageUrl(imagePath: string, ...params: string[]) {
+  return params.length ? `${imagePath}?${params.join('&')}` : imagePath
 }
 
 type Props = {
@@ -16,7 +15,6 @@ type Props = {
   url: string
   post: string
   imagePath: string
-  imageQuery: string
 }
 
 type Copied = 'link' | 'text' | 'image' | 'image-failed' | null
@@ -25,10 +23,10 @@ type Copied = 'link' | 'text' | 'image' | 'image-failed' | null
  * Попап «Поделиться». Соцсети открываются по их собственным ссылкам для публикации:
  * бесплатно, без SDK и сторонних сервисов. Картинку соцсеть возьмёт из превью ссылки (og:image).
  */
-export function ShareDialog({ ref, url, post, imagePath, imageQuery }: Props) {
+export function ShareDialog({ ref, url, post, imagePath }: Props) {
   const [text, setText] = useState(post)
   const [copied, setCopied] = useState<Copied>(null)
-  const card = imageUrl(imagePath, imageQuery)
+  const card = imageUrl(imagePath)
   const title = text.split('\n')[0]
   const e = encodeURIComponent
 
@@ -136,11 +134,11 @@ export function ShareDialog({ ref, url, post, imagePath, imageQuery }: Props) {
                   {copied === 'image' ? <Check size={16} aria-hidden="true" /> : <ImageIcon size={16} aria-hidden="true" />}
                   {copied === 'image' ? 'Картинка в буфере' : 'Копировать картинку'}
                 </button>
-                <a href={imageUrl(imagePath, imageQuery, 'download')} download className={secondary}>
+                <a href={imageUrl(imagePath, 'download')} download className={secondary}>
                   <Download size={16} aria-hidden="true" />
                   Скачать PNG 1200×630
                 </a>
-                <a href={imageUrl(imagePath, imageQuery, 'format=story', 'download')} download className={secondary}>
+                <a href={imageUrl(imagePath, 'format=story', 'download')} download className={secondary}>
                   <Download size={16} aria-hidden="true" />
                   Скачать для сторис
                 </a>

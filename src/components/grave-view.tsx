@@ -14,17 +14,16 @@ import { SharePanel } from './share-panel'
 type Props = {
   data: CertificateData
   variant: string
-  /** Адрес свидетельства на этом сайте, вместе с ?d=, если база не подключена. */
+  /** Адрес свидетельства на этом сайте. */
   href: string
   url: string
   imagePath: string
-  imageQuery: string
   post: string
   /** Пришли прямо со сцены похорон: показываем свидетельство с раскрытием. */
   fresh: boolean
 }
 
-export function GraveView({ data, variant, href, url, imagePath, imageQuery, post, fresh }: Props) {
+export function GraveView({ data, variant, href, url, imagePath, post, fresh }: Props) {
   const reduced = useReducedMotion() ?? false
   const reveal = fresh && !reduced
   // Сцена похорон ушла в темноту, отсюда начинаем с той же темноты и проявляемся.
@@ -72,7 +71,7 @@ export function GraveView({ data, variant, href, url, imagePath, imageQuery, pos
           transition={{ duration: 0.6, ease: 'easeOut', delay: reveal ? 1.3 : 0.2 }}
           className="sticky bottom-0 z-10 -mx-4 bg-[linear-gradient(0deg,var(--color-ground)_65%,rgba(3,7,8,0))] px-4 pt-6 pb-[max(16px,env(safe-area-inset-bottom))] md:static md:m-0 md:bg-none md:p-0"
         >
-          <SharePanel url={url} post={post} imagePath={imagePath} imageQuery={imageQuery} fileName={`rip-${data.owner}-${data.name}`} />
+          <SharePanel url={url} post={post} imagePath={imagePath} fileName={`rip-${data.owner}-${data.name}`} />
         </motion.div>
 
         <motion.div

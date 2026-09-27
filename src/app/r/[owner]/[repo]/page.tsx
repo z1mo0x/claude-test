@@ -3,27 +3,26 @@ import { notFound } from 'next/navigation'
 import { certificateFromGrave } from '@/certificate/data'
 import { GraveView } from '@/components/grave-view'
 import { causeLabel } from '@/lib/causes'
-import { graveHref, resolveGrave } from '@/lib/grave-token'
-import { gravePath } from '@/lib/repo-link'
+import { gravePath, slugOf } from '@/lib/repo-link'
 import { postText } from '@/lib/share'
 import { siteUrl } from '@/lib/site-url'
+import { findGrave } from '@/lib/store'
 
 type Props = {
   params: Promise<{ owner: string; repo: string }>
-  searchParams: Promise<{ buried?: string; d?: string }>
+  searchParams: Promise<{ buried?: string }>
 }
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { owner, repo } = await params
-  const { d } = await searchParams
-  const grave = await resolveGrave(owner, repo, d)
+  const grave = await findGrave(slugOf(owner, repo))
   if (!grave) return { title: 'Могила не найдена' }
 
-  const href = graveHref(grave, d)
+  const href = gravePath(grave.owner, grave.name)
   const title = `${grave.name} — свидетельство о смерти`
   const description = `«${grave.epitaph}» Причина смерти: ${causeLabel(grave.cause).toLowerCase()}.`
   const image = {
-    url: `${gravePath(grave.owner, grave.name)}/certificate.png${d ? `?d=${d}` : ''}`,
+    url: `${href}/certificate.png`,
     width: 1200,
     height: 630,
     alt: `Свидетельство о смерти ${grave.owner}/${grave.name}`,
@@ -40,12 +39,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function GravePage({ params, searchParams }: Props) {
   const { owner, repo } = await params
-  const { buried, d } = await searchParams
-  const grave = await resolveGrave(owner, repo, d)
+  const { buried } = await searchParams
+  const grave = await findGrave(slugOf(owner, repo))
   if (!grave) notFound()
 
   const base = await siteUrl()
-  const href = graveHref(grave, d)
+  const href = gravePath(grave.owner, grave.name)
 
   return (
     <GraveView
@@ -53,8 +52,7 @@ export default async function GravePage({ params, searchParams }: Props) {
       variant={grave.variant}
       href={href}
       url={`${base}${href}`}
-      imagePath={`${gravePath(grave.owner, grave.name)}/certificate.png`}
-      imageQuery={d ? `d=${d}` : ''}
+      imagePath={`${href}/certificate.png`}
       post={postText(grave)}
       fresh={buried === '1'}
     />

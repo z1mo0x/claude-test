@@ -42,6 +42,6 @@ export function mournerLabel(buriedBy: string | null) {
   return buriedBy && isLogin(buriedBy) ? `@${buriedBy}` : buriedBy
 }
 
-export function plotNumber(id: number | null) {
-  return id === null ? '----' : String(id).padStart(4, '0')
+export function plotNumber(id: number) {
+  return String(id).padStart(4, '0')
 }

@@ -6,8 +6,7 @@ import { isCause } from '@/lib/causes'
 import { EPITAPH_MAX } from '@/lib/config'
 import type { BuryError } from '@/lib/errors'
 import { fetchRepo, type LookupError, type RepoFacts } from '@/lib/github'
-import { encodeGrave, graveHref } from '@/lib/grave-token'
-import { isLogin, normalizeLogin, parseRepoLink, slugOf } from '@/lib/repo-link'
+import { gravePath, isLogin, normalizeLogin, parseRepoLink, slugOf } from '@/lib/repo-link'
 import { getStore } from '@/lib/store'
 
 export type LookupResult =
@@ -15,10 +14,8 @@ export type LookupResult =
   | { ok: false; error: LookupError | 'storage' }
 
 async function findExisting(owner: string, name: string) {
-  const store = getStore()
-  if (!store) return { ok: true as const, grave: null }
   try {
-    return { ok: true as const, grave: await store.find(slugOf(owner, name)) }
+    return { ok: true as const, grave: await getStore().find(slugOf(owner, name)) }
   } catch (error) {
     console.error('Хранилище недоступно', error)
     return { ok: false as const, error: 'storage' as const }
@@ -31,7 +28,7 @@ export async function lookup(link: string): Promise<LookupResult> {
 
   const found = await findExisting(parsed.owner, parsed.name)
   if (!found.ok) return found
-  if (found.grave) return { ok: true, repo: found.grave, buriedHref: graveHref(found.grave) }
+  if (found.grave) return { ok: true, repo: found.grave, buriedHref: gravePath(found.grave.owner, found.grave.name) }
 
   const result = await fetchRepo(parsed.owner, parsed.name)
   return result.ok ? { ok: true, repo: result.repo, buriedHref: null } : result
@@ -44,8 +41,6 @@ export type BuryInput = {
   buriedBy: string
   adoptable: boolean
   variant: string
-  /** Номер участка. Нужен только без базы: тогда его знает лишь браузер. */
-  plot: number
 }
 
 export type BuryResult = { ok: true; slug: string; href: string } | { ok: false; error: BuryError }
@@ -71,7 +66,7 @@ export async function bury(input: BuryInput): Promise<BuryResult> {
 
   const found = await findExisting(parsed.owner, parsed.name)
   if (!found.ok) return found
-  if (found.grave) return { ok: true, slug: found.grave.slug, href: graveHref(found.grave) }
+  if (found.grave) return { ok: true, slug: found.grave.slug, href: gravePath(found.grave.owner, found.grave.name) }
 
   // Данные репозитория берём у GitHub сами, а не из формы.
   const result = await fetchRepo(parsed.owner, parsed.name)
@@ -88,18 +83,11 @@ export async function bury(input: BuryInput): Promise<BuryResult> {
     variant: isVariant(String(input.variant)) ? String(input.variant) : defaultVariant.id,
   }
 
-  const store = getStore()
-  if (!store) {
-    const plot = Number.isInteger(input.plot) && input.plot > 0 ? input.plot : 1
-    const token = encodeGrave({ ...grave, id: plot, createdAt: new Date().toISOString() })
-    return { ok: true, slug: grave.slug, href: graveHref(grave, token) }
-  }
-
   try {
-    const saved = await store.create(grave)
+    const saved = await getStore().create(grave)
     // Счётчик в шапке живёт в общем layout, без этого он останется старым.
     revalidatePath('/', 'layout')
-    return { ok: true, slug: saved.slug, href: graveHref(saved) }
+    return { ok: true, slug: saved.slug, href: gravePath(saved.owner, saved.name) }
   } catch (error) {
     console.error('Не удалось сохранить могилу', error)
     return { ok: false, error: 'save_failed' }
