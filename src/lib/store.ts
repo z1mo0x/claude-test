@@ -29,6 +29,8 @@ export interface GraveStore {
   /** Сколько похорон было с этого IP (по хешу) после since. */
   recentBurials(ipHash: string, since: Date): Promise<number>
   logBurial(ipHash: string): Promise<void>
+  /** Все могилы с этого сайта, новые первыми. Для sitemap.xml и llms.txt. */
+  list(): Promise<{ owner: string; name: string; createdAt: string }[]>
 }
 
 /** Метка строк в таблице projects, которые пришли с этой страницы. */
@@ -139,6 +141,20 @@ function supabaseStore(url: string, key: string): GraveStore {
         .gte('created_at', since.toISOString())
       if (error) throw error
       return count ?? 0
+    },
+    async list() {
+      const { data, error } = await db
+        .from('projects')
+        .select('repo_owner, repo_name, created_at')
+        .eq('source', SOURCE)
+        .order('created_at', { ascending: false })
+        .limit(5000)
+      if (error) throw error
+      return (data as Pick<Row, 'repo_owner' | 'repo_name' | 'created_at'>[]).map((r) => ({
+        owner: r.repo_owner,
+        name: r.repo_name,
+        createdAt: r.created_at,
+      }))
     },
     async logBurial(ipHash) {
       const { error } = await db.from('bury_log').insert({ ip_hash: ipHash })

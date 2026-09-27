@@ -1,14 +1,29 @@
 import Image from 'next/image'
 import { connection } from 'next/server'
 import { BuryForm } from '@/components/bury-form'
+import { GOAL } from '@/lib/config'
+import { siteUrl } from '@/lib/site-url'
 import { countGraves } from '@/lib/store'
 
 export default async function Home() {
   await connection()
   const count = await countGraves().catch(() => 0)
+  // Описание сервиса для поисковиков и нейросетей (schema.org).
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Projectyard',
+    url: await siteUrl(),
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web',
+    inLanguage: 'ru',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    description: `Кладбище заброшенных пет-проектов: похорони репозиторий GitHub и получи свидетельство о его смерти. Похоронено ${count} из ${GOAL}.`,
+  }
 
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }} />
       <section className="relative overflow-hidden">
         {/* Луна, ворон и надгробие REST IN CODE — та же картинка, что на главной основного Projectyard. */}
         <Image

@@ -17,8 +17,13 @@ import { siteUrl } from '@/lib/site-url'
 export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(await siteUrl()),
-    title: { default: 'Projectyard — похорони репозиторий', template: '%s · Projectyard' },
-    description: 'Вставь ссылку на заброшенный репозиторий и получи свидетельство о его смерти.',
+    title: { default: 'Projectyard — похорони заброшенный репозиторий', template: '%s · Projectyard' },
+    description:
+      'Кладбище незаконченных пет-проектов. Вставь ссылку на заброшенный репозиторий GitHub, проведи похороны и получи свидетельство о смерти, которым можно поделиться.',
+    keywords: ['заброшенный репозиторий', 'пет-проект', 'GitHub', 'свидетельство о смерти', 'кладбище проектов', 'Projectyard'],
+    alternates: { canonical: '/' },
+    // Коды подтверждения из Google Search Console и Яндекс Вебмастера (способ «HTML-тег»).
+    verification: { google: process.env.GOOGLE_SITE_VERIFICATION, yandex: process.env.YANDEX_VERIFICATION },
     openGraph: { siteName: 'Projectyard', locale: 'ru_RU', type: 'website' },
     twitter: { card: 'summary_large_image' },
   }
