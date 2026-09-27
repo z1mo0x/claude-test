@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowRight } from 'lucide-react'
@@ -25,7 +25,14 @@ type Props = {
 
 export function GraveView({ data, variant, href, url, imagePath, post, fresh }: Props) {
   const reduced = useReducedMotion() ?? false
-  const reveal = fresh && !reduced
+  // «Печать» играет всем: и после похорон, и тем, кто пришёл по ссылке. Сама анимация
+  // в globals.css, при prefers-reduced-motion её выключает там же медиазапрос.
+  const reveal = !reduced
+  // После похорон ждём, пока погаснет тёмная шторка.
+  const start = fresh ? 0.35 : 0
+  const settled = start + 2.3
+  const figure = useRef<HTMLElement>(null)
+  const [stamped, setStamped] = useState(false)
   // Сцена похорон ушла в темноту, отсюда начинаем с той же темноты и проявляемся.
   const [curtain, setCurtain] = useState(fresh)
   const { render } = getVariant(variant)
@@ -34,6 +41,26 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
     // Чтобы ссылка из адресной строки не запускала раскрытие заново.
     if (fresh) window.history.replaceState(null, '', href)
   }, [fresh, href])
+
+  // Печать падает после блоков, но только когда её видно: на телефоне сторис длинная,
+  // и печать внизу. Нижний отступ — под прилипшие кнопки.
+  useEffect(() => {
+    const seals = figure.current?.querySelectorAll('[data-reveal=seal]')
+    if (!seals?.length) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        setStamped(true)
+        observer.disconnect()
+      },
+      { threshold: 0.6, rootMargin: '0px 0px -90px 0px' },
+    )
+    const timer = setTimeout(() => seals.forEach((seal) => observer.observe(seal)), (start + 1.65) * 1000)
+    return () => {
+      clearTimeout(timer)
+      observer.disconnect()
+    }
+  }, [start])
 
   return (
     <main className="relative mx-auto max-w-page px-4 pt-8 pb-10 md:px-8 md:pt-12 md:pb-24">
@@ -45,11 +72,12 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
         </p>
 
         <motion.figure
-          initial={reveal ? { scale: 0.8, opacity: 0, rotate: -2 } : { opacity: 0 }}
-          animate={{ scale: 1, opacity: 1, rotate: 0 }}
-          transition={reveal ? { type: 'spring', stiffness: 120, damping: 16, delay: 0.35 } : { duration: 0.5 }}
-          className="overflow-hidden rounded-[18px]"
-          style={{ boxShadow: '0 0 40px rgba(242, 204, 96, 0.15)' }}
+          ref={figure}
+          initial={reveal ? { scale: 0.97, opacity: 0 } : { opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: reveal ? 0.6 : 0.5, ease: 'easeOut', delay: reveal ? start : 0 }}
+          className={`certificate-reveal overflow-hidden rounded-[18px] ${stamped ? 'stamped' : ''}`}
+          style={{ boxShadow: '0 0 40px rgba(242, 204, 96, 0.15)', '--t': `${start}s` } as CSSProperties}
         >
           {/* На узком экране карточка 1200×630 нечитаема, там показываем вертикальное свидетельство. */}
           <div className="hidden md:block">
@@ -68,7 +96,7 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: reveal ? 1.3 : 0.2 }}
+          transition={{ duration: 0.6, ease: 'easeOut', delay: reveal ? settled : 0.2 }}
           className="sticky bottom-0 z-10 -mx-4 bg-[linear-gradient(0deg,var(--color-ground)_65%,rgba(3,7,8,0))] px-4 pt-6 pb-[max(16px,env(safe-area-inset-bottom))] md:static md:m-0 md:bg-none md:p-0"
         >
           <SharePanel url={url} post={post} imagePath={imagePath} fileName={`rip-${data.owner}-${data.name}`} />
@@ -77,7 +105,7 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: reveal ? 1.5 : 0.3 }}
+          transition={{ duration: 0.6, delay: reveal ? settled + 0.2 : 0.3 }}
           className="self-start"
         >
           <Link href="/" className="flex min-h-11 items-center gap-2 font-bold text-moss-light underline-offset-4 hover:underline">
