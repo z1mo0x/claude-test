@@ -14,8 +14,11 @@ import { SharePanel } from './share-panel'
 type Props = {
   data: CertificateData
   variant: string
-  path: string
+  /** Адрес свидетельства на этом сайте, вместе с ?d=, если база не подключена. */
+  href: string
   url: string
+  imagePath: string
+  imageQuery: string
   post: string
   /** Пришли прямо со сцены похорон: показываем свидетельство с раскрытием. */
   fresh: boolean
@@ -23,7 +26,7 @@ type Props = {
 
 type Phase = 'certificate' | 'share'
 
-export function GraveView({ data, variant, path, url, post, fresh }: Props) {
+export function GraveView({ data, variant, href, url, imagePath, imageQuery, post, fresh }: Props) {
   const reduced = useReducedMotion() ?? false
   const [phase, setPhase] = useState<Phase>(fresh ? 'certificate' : 'share')
   const reveal = fresh && !reduced
@@ -32,10 +35,10 @@ export function GraveView({ data, variant, path, url, post, fresh }: Props) {
   useEffect(() => {
     if (!fresh) return
     // Чтобы ссылка из адресной строки не запускала раскрытие заново.
-    window.history.replaceState(null, '', path)
+    window.history.replaceState(null, '', href)
     const timer = setTimeout(() => setPhase('share'), reduced ? 200 : 1400)
     return () => clearTimeout(timer)
-  }, [fresh, path, reduced])
+  }, [fresh, href, reduced])
 
   return (
     <main className="relative mx-auto max-w-[1240px] px-4 pt-8 pb-24 md:px-8 md:pt-12">
@@ -75,7 +78,8 @@ export function GraveView({ data, variant, path, url, post, fresh }: Props) {
               <SharePanel
                 url={url}
                 post={post}
-                imagePath={`${path}/certificate.png`}
+                imagePath={imagePath}
+                imageQuery={imageQuery}
                 fileName={`rip-${data.owner}-${data.name}`}
                 breathe={fresh}
               />

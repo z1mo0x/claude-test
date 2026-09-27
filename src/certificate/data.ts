@@ -1,9 +1,9 @@
 import { causeLabel } from '@/lib/causes'
 import { plotNumber } from '@/lib/format'
-import type { Grave } from '@/lib/store'
+import type { CertificateSource } from '@/lib/store'
 import type { CertificateData } from './types'
 
-export function certificateFromGrave(grave: Grave, site: string): CertificateData {
+export function certificateFromGrave(grave: CertificateSource, site: string): CertificateData {
   return {
     owner: grave.owner,
     name: grave.name,

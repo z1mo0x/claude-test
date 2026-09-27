@@ -2,9 +2,12 @@
 
 import { useRef } from 'react'
 import { plural } from '@/lib/format'
+import { useLocalGraveCount } from '@/lib/local-graves'
 
-export function GoalCounter({ count, goal }: { count: number; goal: number }) {
+export function GoalCounter({ count: saved, goal }: { count: number | null; goal: number }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const local = useLocalGraveCount()
+  const count = saved ?? local
   const reached = count >= goal
   const left = Math.max(0, goal - count)
   const progress = `${Math.min(100, (count / goal) * 100)}%`
@@ -47,6 +50,11 @@ export function GoalCounter({ count, goal }: { count: number; goal: number }) {
               ? 'Начинаем разработку основного Projectyard — кладбища, где у каждого проекта будет своя могила. Все, кого похоронили здесь, переедут туда первыми.'
               : `Когда здесь наберётся ${goal} проектов, начнём разработку основного Projectyard — кладбища, где у каждого проекта будет своя могила. Все, кого похоронили здесь, переедут туда первыми.`}
           </p>
+          {saved === null && (
+            <p className="font-mono text-[13px] leading-relaxed text-muted">
+              &gt; тестовый режим: база не подключена, счётчик считает похороны в этом браузере
+            </p>
+          )}
           <div className="flex flex-col gap-2">
             <div className="flex justify-between font-mono text-[13px]">
               <span>
