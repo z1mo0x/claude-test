@@ -19,7 +19,7 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/8 bg-ground/85 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-4 px-4 md:px-8">
+      <div className="mx-auto flex h-16 max-w-page items-center justify-between gap-4 px-4 md:px-8">
         <Link href="/" className="flex items-center gap-3 text-moss">
           <Image src="/images/logo.png" alt="" width={24} height={28} priority />
           <span className="glow font-mono text-[15px] font-bold">

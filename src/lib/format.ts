@@ -1,3 +1,5 @@
+import { isLogin } from './repo-link'
+
 const DAY = 86_400_000
 
 export function plural(n: number, forms: [one: string, few: string, many: string]) {
@@ -33,6 +35,11 @@ export function lifetime(days: number) {
 
 export function commitsLabel(n: number) {
   return `${n} ${plural(n, ['коммит', 'коммита', 'коммитов'])}`
+}
+
+/** Ник на GitHub показываем как @ник. Старые записи, где было просто имя, — как есть. */
+export function mournerLabel(buriedBy: string | null) {
+  return buriedBy && isLogin(buriedBy) ? `@${buriedBy}` : buriedBy
 }
 
 export function plotNumber(id: number | null) {

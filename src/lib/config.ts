@@ -2,4 +2,5 @@
 export const GOAL = 100
 
 export const EPITAPH_MAX = 80
-export const NAME_MAX = 32
+/** Ник на GitHub того, кто хоронит. 39 — максимум длины логина на GitHub. */
+export const NAME_MAX = 39

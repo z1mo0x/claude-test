@@ -3,11 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { defaultVariant, isVariant } from '@/certificate/variants'
 import { isCause } from '@/lib/causes'
-import { EPITAPH_MAX, NAME_MAX } from '@/lib/config'
+import { EPITAPH_MAX } from '@/lib/config'
 import type { BuryError } from '@/lib/errors'
 import { fetchRepo, type LookupError, type RepoFacts } from '@/lib/github'
 import { encodeGrave, graveHref } from '@/lib/grave-token'
-import { parseRepoLink, slugOf } from '@/lib/repo-link'
+import { isLogin, normalizeLogin, parseRepoLink, slugOf } from '@/lib/repo-link'
 import { getStore } from '@/lib/store'
 
 export type LookupResult =
@@ -65,7 +65,9 @@ export async function bury(input: BuryInput): Promise<BuryResult> {
 
   const cause = String(input.cause)
   const epitaph = clean(input.epitaph, EPITAPH_MAX)
-  if (!epitaph || !isCause(cause)) return { ok: false, error: 'bad_input' }
+  // Ник обязателен и проверяется здесь же: форму можно обойти.
+  const buriedBy = normalizeLogin(String(input.buriedBy ?? ''))
+  if (!epitaph || !isCause(cause) || !isLogin(buriedBy)) return { ok: false, error: 'bad_input' }
 
   const found = await findExisting(parsed.owner, parsed.name)
   if (!found.ok) return found
@@ -81,7 +83,7 @@ export async function bury(input: BuryInput): Promise<BuryResult> {
     slug: slugOf(repo.owner, repo.name),
     cause,
     epitaph,
-    buriedBy: clean(input.buriedBy, NAME_MAX) || null,
+    buriedBy,
     adoptable: input.adoptable === true,
     variant: isVariant(String(input.variant)) ? String(input.variant) : defaultVariant.id,
   }
