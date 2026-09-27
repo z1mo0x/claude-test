@@ -13,6 +13,9 @@
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-sans: 'Manrope', system-ui, sans-serif;
+
+  /* Ширина страницы: класс max-w-page. */
+  --container-page: 100rem;
 }
 
 html {
@@ -78,7 +81,32 @@ body {
   mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
 }
 
+/* Главная кнопка «Поделиться»: медленно разгорается и гаснет, как неоновая вывеска. */
+@keyframes neon {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 rgb(120 184 90 / 0),
+      0 0 0 rgb(120 184 90 / 0);
+    filter: brightness(0.94);
+  }
+  50% {
+    box-shadow:
+      0 0 18px rgb(120 184 90 / 0.55),
+      0 0 42px rgb(120 184 90 / 0.3);
+    filter: brightness(1.08);
+  }
+}
+
+.neon {
+  animation: neon 3.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .neon {
+    animation: none;
+    box-shadow: 0 0 24px rgb(120 184 90 / 0.35);
+  }
   .cursor {
     animation: none;
   }

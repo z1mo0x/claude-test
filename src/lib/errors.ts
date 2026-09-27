@@ -8,6 +8,6 @@ export const errorMessages: Record<BuryError, string> = {
   rate_limited: 'GitHub просит подождать. Попробуй через минуту',
   unavailable: 'GitHub не отвечает. Попробуй ещё раз',
   storage: 'Кладбище временно закрыто. Попробуй чуть позже',
-  bad_input: 'Выбери причину смерти и напиши эпитафию',
+  bad_input: 'Выбери причину смерти, напиши эпитафию и укажи ник на GitHub',
   save_failed: 'Не получилось сохранить. Попробуй ещё раз',
 }

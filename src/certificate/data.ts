@@ -1,5 +1,5 @@
 import { causeLabel } from '@/lib/causes'
-import { plotNumber } from '@/lib/format'
+import { mournerLabel, plotNumber } from '@/lib/format'
 import type { CertificateSource } from '@/lib/store'
 import type { CertificateData } from './types'
 
@@ -14,7 +14,7 @@ export function certificateFromGrave(grave: CertificateSource, site: string): Ce
     lastWords: grave.lastWords,
     cause: causeLabel(grave.cause),
     epitaph: grave.epitaph,
-    buriedBy: grave.buriedBy,
+    buriedBy: mournerLabel(grave.buriedBy),
     plot: plotNumber(grave.id),
     issuedAt: grave.createdAt,
     site,

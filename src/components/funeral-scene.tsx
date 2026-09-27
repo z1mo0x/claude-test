@@ -34,6 +34,13 @@ const duration: Record<'full' | 'reduced', Record<TimedStep, number>> = {
 
 /** Пауза, в которой ничего не происходит. Не короче этого, даже если сервер ответил раньше. */
 const SILENCE = 900
+/**
+ * Сцена гаснет в темноту, и только потом открывается свидетельство. Страница свидетельства
+ * начинает с той же темноты (grave-view.tsx), поэтому стыка не видно.
+ */
+const FADE = { full: 800, reduced: 200 }
+/** Если страница свидетельства грузится дольше, на тёмном экране появляется подпись. */
+const WAITING = 1200
 
 const order: BurialStep[] = ['prep', 'coffin', 'lowering', 'burying', 'silence']
 
@@ -115,6 +122,8 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
   const [step, setStep] = useState<BurialStep>('prep')
   const [error, setError] = useState<string | null>(null)
   const [slow, setSlow] = useState(false)
+  const [leaving, setLeaving] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState(false)
   const pending = useRef<Promise<BuryResult> | null>(null)
   const commitRef = useRef(commit)
   const abortRef = useRef<HTMLButtonElement>(null)
@@ -144,7 +153,9 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       .then(([result]) => {
         if (!active) return
         if (result.ok) {
-          router.push(`${result.href}${result.href.includes('?') ? '&' : '?'}buried=1`)
+          const target = `${result.href}${result.href.includes('?') ? '&' : '?'}buried=1`
+          router.prefetch(target)
+          setLeaving(target)
         } else {
           setError(errorMessages[result.error])
           setStep('failed')
@@ -161,6 +172,24 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       clearTimeout(slowTimer)
     }
   }, [step, router])
+
+  useEffect(() => {
+    if (!leaving) return
+    const fade = setTimeout(
+      () => {
+        // Страница с формой могла быть прокручена вниз. Свидетельство открываем с самого верха,
+        // а собственную прокрутку Next отключаем, чтобы он не дёргал страницу после перехода.
+        window.scrollTo(0, 0)
+        router.push(leaving, { scroll: false })
+      },
+      FADE[reduced ? 'reduced' : 'full'],
+    )
+    const wait = setTimeout(() => setWaiting(true), FADE[reduced ? 'reduced' : 'full'] + WAITING)
+    return () => {
+      clearTimeout(fade)
+      clearTimeout(wait)
+    }
+  }, [leaving, reduced, router])
 
   useEffect(() => {
     const { overflow } = document.body.style
@@ -456,6 +485,24 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
           </AnimatePresence>
         </div>
       </div>
+
+      <AnimatePresence>
+        {leaving && (
+          <motion.div
+            key="leaving"
+            className="absolute inset-0 z-10 flex items-center justify-center bg-ground"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: FADE[reduced ? 'reduced' : 'full'] / 1000, ease: 'easeInOut' }}
+          >
+            {waiting && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-mono text-[13px] text-muted">
+                &gt; оформляю свидетельство…
+              </motion.p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
