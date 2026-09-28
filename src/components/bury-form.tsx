@@ -183,7 +183,7 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
 
   return (
     <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)] lg:items-start">
-      <form onSubmit={submit} className="flex flex-col gap-7 rounded-2xl border border-white/10 bg-panel p-5 md:p-8">
+      <form onSubmit={submit} className="stone-panel flex flex-col gap-7 rounded-2xl border border-white/10 p-5 md:p-8">
         <div className="flex flex-col gap-3">
           <Step n="01" htmlFor="repo">
             {t.form.link}
@@ -355,7 +355,7 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
         <button
           type="submit"
           disabled={!ready}
-          className="flex h-15 items-center justify-center rounded-[10px] bg-moss font-extrabold tracking-[0.06em] text-[#07120a] uppercase shadow-[0_0_36px_rgba(120,184,90,0.22)] transition-opacity disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+          className="stone-button flex h-15 items-center justify-center font-extrabold tracking-[0.06em] uppercase disabled:cursor-not-allowed disabled:opacity-40"
         >
           {t.form.submit}
         </button>
