@@ -41,8 +41,8 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       onClick={onClick}
       className={
         selected
-          ? 'min-h-11 rounded-full border border-moss bg-moss/14 px-4 text-[14px] font-bold text-moss-light'
-          : 'min-h-11 rounded-full border border-white/14 px-4 text-[14px] text-ink/80 transition-colors hover:border-white/30'
+          ? 'min-h-11 rounded-full border border-moss bg-moss/22 px-4 text-[14px] font-bold text-moss-light shadow-[0_0_14px_rgba(120,184,90,0.35)]'
+          : 'min-h-11 rounded-full border border-white/20 bg-ground/75 px-4 text-[14px] text-ink/85 transition-colors hover:border-white/40 hover:bg-ground/90'
       }
     >
       <span className="grid text-center">
@@ -271,7 +271,7 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
             <button
               type="button"
               onClick={shuffle}
-              className="flex min-h-11 items-center gap-2 rounded-lg border border-white/14 px-3.5 text-[14px] font-semibold transition-colors hover:border-white/30"
+              className="flex min-h-11 items-center gap-2 rounded-lg border border-white/20 bg-ground/75 px-3.5 text-[14px] font-semibold transition-colors hover:border-white/40"
             >
               <Shuffle size={17} aria-hidden="true" />
               {t.form.shuffle}
