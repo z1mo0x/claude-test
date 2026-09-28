@@ -13,6 +13,7 @@ import '@fontsource/manrope/800.css'
 import './globals.css'
 import { SiteHeader } from '@/components/site-header'
 import { siteUrl } from '@/lib/site-url'
+import { Analytics } from '@vercel/analytics/next'
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <SiteHeader />
         {children}
+        <Analytics />
       </body>
     </html>
   )
