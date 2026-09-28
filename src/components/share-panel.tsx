@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, Download, Link2, Share2 } from 'lucide-react'
+import { useI18n } from '@/i18n/client'
 import { imageUrl, secondary, ShareDialog } from './share-dialog'
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
  * по прямым ссылкам.
  */
 export function SharePanel({ url, post, imagePath, fileName }: Props) {
+  const { t } = useI18n()
   const dialog = useRef<HTMLDialogElement>(null)
   const [native, setNative] = useState(false)
   const [story, setStory] = useState<File | null>(null)
@@ -73,23 +75,23 @@ export function SharePanel({ url, post, imagePath, fileName }: Props) {
           className="neon flex min-h-12 flex-1 items-center justify-center gap-2 rounded-[10px] bg-moss px-6 font-extrabold text-[#07120a] md:flex-none"
         >
           <Share2 size={18} aria-hidden="true" />
-          Поделиться
+          {t.share.button}
         </button>
         <button type="button" onClick={copyLink} className={`${secondary} min-h-12 min-w-12 max-md:px-0`}>
           {copied ? <Check size={16} aria-hidden="true" /> : <Link2 size={16} aria-hidden="true" />}
-          <span className="sr-only md:not-sr-only">{copied ? 'Скопировано' : 'Ссылка'}</span>
+          <span className="sr-only md:not-sr-only">{copied ? t.share.copied : t.share.link}</span>
         </button>
         <a
           href={imageUrl(imagePath, 'format=story', 'download')}
           download
-          aria-label="Скачать свидетельство для сторис"
+          aria-label={t.share.downloadStoryLabel}
           className={`${secondary} min-h-12 min-w-12 px-0 md:hidden`}
         >
           <Download size={16} aria-hidden="true" />
         </a>
         <a href={imageUrl(imagePath, 'download')} download className={`${secondary} hidden min-h-12 md:flex`}>
           <Download size={16} aria-hidden="true" />
-          Скачать PNG
+          {t.share.downloadPng}
         </a>
       </div>
       <ShareDialog ref={dialog} url={url} post={post} imagePath={imagePath} />

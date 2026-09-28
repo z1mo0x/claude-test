@@ -4,6 +4,7 @@ import { commitsLabel, daysBetween, lifetime } from '@/lib/format'
 
 /** Пример для ролика. Все тексты здесь, чтобы ролик легко переписать или перевести. */
 export const sample: CertificateData = {
+  lang: 'ru',
   owner: 'you',
   name: 'weekend-app',
   language: 'TypeScript',

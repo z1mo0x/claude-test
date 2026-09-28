@@ -1,9 +1,10 @@
 'use client'
 
 import { useRef } from 'react'
-import { plural } from '@/lib/format'
+import { useI18n } from '@/i18n/client'
 
 export function GoalCounter({ count, goal }: { count: number; goal: number }) {
+  const { t } = useI18n()
   const dialog = useRef<HTMLDialogElement>(null)
   const reached = count >= goal
   const left = Math.max(0, goal - count)
@@ -15,11 +16,11 @@ export function GoalCounter({ count, goal }: { count: number; goal: number }) {
         type="button"
         aria-haspopup="dialog"
         onClick={() => dialog.current?.showModal()}
-        className="flex min-h-11 flex-col items-end justify-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 font-mono text-[13px] transition-colors hover:border-moss/60"
+        className="flex min-h-11 flex-col items-end justify-center gap-1.5 rounded-lg border border-white/12 px-2.5 py-1.5 font-mono text-[12px] whitespace-nowrap transition-colors hover:border-moss/60 sm:px-3 sm:text-[13px]"
       >
         <span>
           <b className="text-moss-light">{count}</b>
-          <span className="text-muted">/{goal}</span> проектов
+          <span className="text-muted">/{goal}</span> {t.goal.unit}
         </span>
         <span className="block h-1 w-full overflow-hidden rounded-full bg-white/8">
           <span className="block h-full rounded-full bg-moss" style={{ width: progress }} />
@@ -37,25 +38,17 @@ export function GoalCounter({ count, goal }: { count: number; goal: number }) {
         <div className="flex flex-col gap-5 p-6 md:p-8">
           <p className="font-mono text-[13px] font-bold text-moss">projectyard&gt; roadmap</p>
           <h2 id="goal-title" className="font-serif text-[32px] leading-none font-bold text-bone">
-            {reached ? 'Сто проектов похоронено' : 'Что будет на сотом проекте'}
+            {reached ? t.goal.titleReached : t.goal.title}
           </h2>
-          <p className="leading-relaxed text-ink/85">
-            Пока здесь можно только похоронить репозиторий и получить свидетельство о его смерти.
-          </p>
-          <p className="leading-relaxed text-ink/85">
-            {reached
-              ? 'Начинаем разработку основного Projectyard — кладбища, где у каждого проекта будет своя могила. Все, кого похоронили здесь, переедут туда первыми.'
-              : `Когда здесь наберётся ${goal} проектов, начнём разработку основного Projectyard — кладбища, где у каждого проекта будет своя могила. Все, кого похоронили здесь, переедут туда первыми.`}
-          </p>
+          <p className="leading-relaxed text-ink/85">{t.goal.now}</p>
+          <p className="leading-relaxed text-ink/85">{reached ? t.goal.planReached : t.goal.plan(goal)}</p>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between font-mono text-[13px]">
               <span>
-                <b className="text-moss-light">{count}</b> из {goal}
+                <b className="text-moss-light">{count}</b> {t.goal.of} {goal}
               </span>
               {!reached && (
-                <span className="text-muted">
-                  {plural(left, ['остался', 'осталось', 'осталось'])} {left}
-                </span>
+                <span className="text-muted">{t.goal.left(left)}</span>
               )}
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/8">
@@ -64,7 +57,7 @@ export function GoalCounter({ count, goal }: { count: number; goal: number }) {
           </div>
           <form method="dialog" className="flex justify-end">
             <button className="min-h-11 rounded-lg border border-moss/70 bg-moss/10 px-5 font-bold text-moss-light transition-colors hover:bg-moss/20">
-              Понятно
+              {t.goal.close}
             </button>
           </form>
         </div>

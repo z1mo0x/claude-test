@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Script from 'next/script'
+import { useI18n } from '@/i18n/client'
 
 type Turnstile = {
   render(container: HTMLElement, options: Record<string, unknown>): string
@@ -25,6 +26,7 @@ export const botCheckEnabled = Boolean(SITE_KEY)
  * похорон форма пересоздаёт виджет сменой key.
  */
 export function BotCheck({ onToken }: { onToken: (token: string) => void }) {
+  const { lang } = useI18n()
   const box = useRef<HTMLDivElement>(null)
   const [loaded, setLoaded] = useState(false)
   const callback = useRef(onToken)
@@ -40,13 +42,13 @@ export function BotCheck({ onToken }: { onToken: (token: string) => void }) {
       appearance: 'interaction-only',
       'refresh-expired': 'auto',
       theme: 'dark',
-      language: 'ru',
+      language: lang,
       callback: (token: string) => callback.current(token),
       'expired-callback': () => callback.current(''),
       'error-callback': () => callback.current(''),
     })
     return () => window.turnstile?.remove(widget)
-  }, [loaded])
+  }, [loaded, lang])
 
   if (!SITE_KEY) return null
   return (

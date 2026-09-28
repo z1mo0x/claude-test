@@ -1,24 +1,27 @@
 import Image from 'next/image'
 import { connection } from 'next/server'
 import { BuryForm } from '@/components/bury-form'
+import { defaultLang, dictionary, localePath, toLang } from '@/i18n'
 import { GOAL } from '@/lib/config'
 import { siteUrl } from '@/lib/site-url'
 import { countGraves } from '@/lib/store'
 
-export default async function Home() {
+export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
   await connection()
+  const lang = toLang((await params).lang)
+  const t = dictionary(lang)
   const count = await countGraves().catch(() => 0)
   // Описание сервиса для поисковиков и нейросетей (schema.org).
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Projectyard',
-    url: await siteUrl(),
+    url: `${await siteUrl()}${lang === defaultLang ? '' : localePath(lang, '/')}`,
     applicationCategory: 'DeveloperApplication',
     operatingSystem: 'Web',
-    inLanguage: 'ru',
+    inLanguage: lang,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    description: `Кладбище заброшенных пет-проектов: похорони репозиторий GitHub и получи свидетельство о его смерти. Похоронено ${count} из ${GOAL}.`,
+    description: t.meta.schema(count, GOAL),
   }
 
   return (
@@ -40,13 +43,10 @@ export default async function Home() {
         <div className="relative mx-auto flex max-w-page flex-col gap-5 px-4 pt-12 pb-6 md:px-8 lg:pt-20 lg:pb-16">
           <p className="glow font-mono text-[14px] font-bold text-moss">projectyard&gt; bury --repo</p>
           <h1 className="flex flex-col font-serif text-[40px] leading-[1.02] font-bold text-bone uppercase md:text-[64px]">
-            <span>Проводи репозиторий</span>
-            <span className="text-moss-light">в последний путь</span>
+            <span>{t.home.title[0]}</span>
+            <span className="text-moss-light">{t.home.title[1]}</span>
           </h1>
-          <p className="max-w-md text-[16px] leading-relaxed text-ink/80">
-            Вставь ссылку на GitHub. Даты, возраст и последние слова подтянутся сами, останется выбрать причину смерти и
-            написать эпитафию.
-          </p>
+          <p className="max-w-md text-[16px] leading-relaxed text-ink/80">{t.home.lead}</p>
         </div>
       </section>
 

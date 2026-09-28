@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import type { Lang } from '@/i18n'
 
 /** card — превью ссылки и PNG 1200×630, story — вертикальная картинка для сторис. */
 export type CertificateFormat = 'card' | 'story'
@@ -9,6 +10,8 @@ export const formatSize: Record<CertificateFormat, { width: number; height: numb
 }
 
 export type CertificateData = {
+  /** Язык подписей на свидетельстве. */
+  lang: Lang
   owner: string
   name: string
   language: string | null

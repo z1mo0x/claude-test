@@ -5,9 +5,9 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react'
 import type { BuryResult } from '@/app/actions'
-import { errorMessages } from '@/lib/errors'
+import { useI18n } from '@/i18n/client'
 import type { RepoFacts } from '@/lib/github'
-import { commitsLabel, daysBetween, lifetime } from '@/lib/format'
+import { daysBetween } from '@/lib/format'
 import { GraveyardAir } from './graveyard-air'
 
 /**
@@ -117,6 +117,7 @@ type Props = {
 
 export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
   const router = useRouter()
+  const { t, path } = useI18n()
   const reduced = useReducedMotion() ?? false
   const scale = useStageScale()
   const [step, setStep] = useState<BurialStep>('prep')
@@ -153,17 +154,17 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       .then(([result]) => {
         if (!active) return
         if (result.ok) {
-          const target = `${result.href}?buried=1`
+          const target = `${path(result.href)}?buried=1`
           router.prefetch(target)
           setLeaving(target)
         } else {
-          setError(errorMessages[result.error])
+          setError(t.errors[result.error])
           setStep('failed')
         }
       })
       .catch(() => {
         if (!active) return
-        setError(errorMessages.save_failed)
+        setError(t.errors.save_failed)
         setStep('failed')
       })
 
@@ -171,7 +172,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
       active = false
       clearTimeout(slowTimer)
     }
-  }, [step, router])
+  }, [step, router, t, path])
 
   useEffect(() => {
     if (!leaving) return
@@ -209,14 +210,14 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [abortable, onAbort])
 
-  const lived = repo.diedAt ? lifetime(daysBetween(repo.bornAt, repo.diedAt)) : null
+  const lived = repo.diedAt ? t.format.lifetime(daysBetween(repo.bornAt, repo.diedAt)) : null
   const years = `${new Date(repo.bornAt).getUTCFullYear()} — ${new Date(repo.diedAt ?? repo.bornAt).getUTCFullYear()}`
   const coffinState = step === 'prep' ? 'hidden' : step === 'coffin' ? 'shown' : step === 'lowering' ? 'lowered' : 'buried'
   const burying = step === 'burying'
   const captions: Partial<Record<BurialStep, string>> = {
-    coffin: `Прощание с ${repo.name}`,
-    lowering: [lived && `${lived} разработки`, commitsLabel(repo.commits)].filter(Boolean).join(' · '),
-    burying: `«${epitaph}»`,
+    coffin: t.scene.farewell(repo.name),
+    lowering: [lived && t.scene.development(lived), t.format.commits(repo.commits)].filter(Boolean).join(' · '),
+    burying: t.certificate.quote(epitaph),
   }
   // Камера вздрагивает, когда гроб уходит в землю и когда из неё поднимается камень.
   const shake = !reduced && (step === 'lowering' || burying)
@@ -227,7 +228,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
     <motion.div
       role="dialog"
       aria-modal="true"
-      aria-label={`Похороны ${repo.owner}/${repo.name}`}
+      aria-label={t.scene.label(`${repo.owner}/${repo.name}`)}
       className="fixed inset-0 z-50 overflow-hidden bg-ground"
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -278,7 +279,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
               <span className="font-mono text-[12px] text-muted">{repo.owner} /</span>
               <span className="font-serif text-[34px] leading-none font-bold break-all text-bone">{repo.name}</span>
               <span className="flex justify-between font-mono text-[12px] text-muted">
-                <span>{repo.language ?? 'без языка'}</span>
+                <span>{repo.language ?? t.scene.noLanguage}</span>
                 <span>{years}</span>
               </span>
             </div>
@@ -450,7 +451,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
               )}
               {step === 'silence' && slow && (
                 <motion.p key="slow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-mono text-[13px] text-muted">
-                  оформляем свидетельство…
+                  {t.scene.slow}
                 </motion.p>
               )}
               {step === 'failed' && (
@@ -461,7 +462,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
                     onClick={onAbort}
                     className="pointer-events-auto min-h-11 rounded-lg border border-white/16 px-5 font-semibold transition-colors hover:border-white/30"
                   >
-                    Вернуться к форме
+                    {t.scene.back}
                   </button>
                 </motion.div>
               )}
@@ -479,7 +480,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
                 exit={{ opacity: 0 }}
                 className="pointer-events-auto absolute top-[730px] left-1/2 min-h-11 -translate-x-1/2 rounded-lg border border-white/12 bg-ground/60 px-5 font-mono text-[13px] whitespace-nowrap text-muted transition-colors hover:border-white/30 hover:text-ink"
               >
-                Отменить похороны
+                {t.scene.cancel}
               </motion.button>
             )}
           </AnimatePresence>
@@ -497,7 +498,7 @@ export function FuneralScene({ repo, epitaph, commit, onAbort }: Props) {
           >
             {waiting && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-mono text-[13px] text-muted">
-                &gt; оформляю свидетельство…
+                &gt; {t.scene.leaving}
               </motion.p>
             )}
           </motion.div>

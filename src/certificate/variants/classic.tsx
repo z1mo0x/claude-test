@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
-import { daysBetween, formatDate, lifetime } from '@/lib/format'
+import { dictionary } from '@/i18n'
+import { daysBetween } from '@/lib/format'
 import { Skull } from '../skull'
 import type { CertificateAssets, CertificateData, CertificateVariant } from '../types'
 import { typeface } from '../typography'
@@ -30,14 +31,17 @@ function nameSize(name: string, base: number) {
 }
 
 function facts(d: CertificateData) {
+  const { format, certificate: t } = dictionary(d.lang)
   return {
-    born: d.bornAt ? formatDate(d.bornAt) : '—',
-    died: d.diedAt ? formatDate(d.diedAt) : '—',
-    lived: d.bornAt && d.diedAt ? lifetime(daysBetween(d.bornAt, d.diedAt)) : '—',
-    silence: d.diedAt ? `тишина ${lifetime(daysBetween(d.diedAt, d.issuedAt))}` : 'коммитов не было',
+    t,
+    born: d.bornAt ? format.date(d.bornAt) : '—',
+    died: d.diedAt ? format.date(d.diedAt) : '—',
+    lived: d.bornAt && d.diedAt ? format.lifetime(daysBetween(d.bornAt, d.diedAt)) : '—',
+    silence: d.diedAt ? t.silence(format.lifetime(daysBetween(d.diedAt, d.issuedAt))) : t.noCommits,
     lastWords: d.lastWords ? `"${cut(d.lastWords, 60)}"` : '—',
     name: cut(d.name, 40),
-    issued: formatDate(d.issuedAt),
+    issued: t.issued(d.plot, format.date(d.issuedAt)),
+    epitaph: t.quote(d.epitaph),
   }
 }
 
@@ -70,7 +74,7 @@ function Divider({ width, diamond }: { width: number; diamond: number }) {
   )
 }
 
-function Seal({ size, style }: { size: number; style: CSSProperties }) {
+function Seal({ text, size, style }: { text: string; size: number; style: CSSProperties }) {
   return (
     <div
       data-reveal="seal"
@@ -102,7 +106,7 @@ function Seal({ size, style }: { size: number; style: CSSProperties }) {
       >
         <div style={{ display: 'flex', fontFamily: mono, fontWeight: 700, fontSize: size * 0.15, lineHeight: 1 }}>{'{ }'}</div>
         <div style={{ display: 'flex', marginTop: size * 0.04, fontFamily: serif, fontWeight: 700, fontSize: size * 0.1, letterSpacing: 2 }}>
-          ПОХОРОНЕН
+          {text}
         </div>
         <div style={{ display: 'flex', fontFamily: mono, fontWeight: 700, fontSize: size * 0.08 }}>R.I.C.</div>
       </div>
@@ -213,7 +217,7 @@ function LastWords({ d, f, scale }: { d: CertificateData; f: ReturnType<typeof f
         backgroundColor: 'rgba(3,7,8,0.72)',
       }}
     >
-      <div style={{ ...label, fontSize: 12 * scale }}>Последние слова</div>
+      <div style={{ ...label, fontSize: 12 * scale }}>{f.t.lastWords}</div>
       <div style={{ display: 'flex', marginTop: 8 * scale, fontFamily: mono, fontSize: 14 * scale, color: color.muted }}>
         $ git log -1 --oneline
       </div>
@@ -238,7 +242,7 @@ function LastWords({ d, f, scale }: { d: CertificateData; f: ReturnType<typeof f
   )
 }
 
-function Cause({ d, scale, marginTop }: { d: CertificateData; scale: number; marginTop: number }) {
+function Cause({ d, title, scale, marginTop }: { d: CertificateData; title: string; scale: number; marginTop: number }) {
   return (
     <div
       style={{
@@ -251,7 +255,7 @@ function Cause({ d, scale, marginTop }: { d: CertificateData; scale: number; mar
         backgroundColor: 'rgba(120,184,90,0.08)',
       }}
     >
-      <div style={{ ...label, fontSize: 12 * scale }}>Причина смерти</div>
+      <div style={{ ...label, fontSize: 12 * scale }}>{title}</div>
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 * scale, color: color.mossLight }}>
         <Skull size={24 * scale} color={color.mossLight} />
         <div style={{ display: 'flex', marginLeft: 10 * scale, fontFamily: sans, fontWeight: 700, fontSize: 21 * scale }}>
@@ -283,7 +287,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
     >
       <Backdrop src={assets.backdrop} width={1200} height={630} opacity={0.85} />
       <Frames width={1200} height={630} inset={22} />
-      <Seal size={124} style={{ right: 60, bottom: 30, opacity: 0.7 }} />
+      <Seal text={f.t.seal} size={124} style={{ right: 60, bottom: 30, opacity: 0.7 }} />
 
       <div
         style={{
@@ -300,7 +304,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
         <div data-reveal="1" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Brand size={15} logo={assets.logo} />
           <div style={{ display: 'flex', fontFamily: mono, fontSize: 14, color: color.muted }}>
-            {`№ ${d.plot} · выдано ${f.issued}`}
+            {f.issued}
           </div>
         </div>
 
@@ -318,7 +322,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
               textShadow: engraved,
             }}
           >
-            Свидетельство о смерти
+            {f.t.title}
           </div>
           <div style={{ display: 'flex', marginTop: 12 }}>
             <Divider width={380} diamond={10} />
@@ -358,7 +362,7 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
                 color: 'rgba(212,216,207,0.88)',
               }}
             >
-              {`«${d.epitaph}»`}
+              {f.epitaph}
             </div>
             <div
               data-reveal="5"
@@ -370,16 +374,16 @@ function Card({ d, assets }: { d: CertificateData; assets: CertificateAssets }) 
                 borderTop: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <Stat title="Родился" value={f.born} size={27} />
-              <Stat title="Умер" value={f.died} size={27} />
-              <Stat title="Прожил" value={f.lived} size={27} />
-              <Stat title="Коммитов" value={String(d.commits)} size={27} />
+              <Stat title={f.t.born} value={f.born} size={27} />
+              <Stat title={f.t.died} value={f.died} size={27} />
+              <Stat title={f.t.lived} value={f.lived} size={27} />
+              <Stat title={f.t.commits} value={String(d.commits)} size={27} />
             </div>
           </div>
 
           <div data-reveal="6" style={{ display: 'flex', flexDirection: 'column', width: 370, marginLeft: 48 }}>
             <LastWords d={d} f={f} scale={1} />
-            <Cause d={d} scale={1} marginTop={14} />
+            <Cause d={d} title={f.t.cause} scale={1} marginTop={14} />
             <div style={{ display: 'flex', marginTop: 14, fontFamily: mono, fontSize: 13, color: color.muted }}>
               {[d.language, d.buriedBy ? `buried_by: ${d.buriedBy}` : null].filter(Boolean).join(' · ') || ' '}
             </div>
@@ -410,7 +414,7 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
     >
       <Backdrop src={assets.backdrop} width={1080} height={1920} opacity={0.9} />
       <Frames width={1080} height={1920} inset={36} />
-      <Seal size={190} style={{ right: 72, bottom: 104, opacity: 0.6 }} />
+      <Seal text={f.t.seal} size={190} style={{ right: 72, bottom: 104, opacity: 0.6 }} />
 
       <div
         style={{
@@ -427,7 +431,7 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
       >
         <Brand size={26} logo={assets.logo} reveal="1" />
         <div data-reveal="1" style={{ display: 'flex', marginTop: 18, fontFamily: mono, fontSize: 24, color: color.muted }}>
-          {`№ ${d.plot} · выдано ${f.issued}`}
+          {f.issued}
         </div>
 
         <div
@@ -447,8 +451,11 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
             textShadow: engraved,
           }}
         >
-          <div style={{ display: 'flex' }}>Свидетельство</div>
-          <div style={{ display: 'flex' }}>о смерти</div>
+          {f.t.titleLines.map((line) => (
+            <div key={line} style={{ display: 'flex' }}>
+              {line}
+            </div>
+          ))}
         </div>
         <div data-reveal="2" style={{ display: 'flex', marginTop: 28 }}>
           <Divider width={520} diamond={14} />
@@ -489,7 +496,7 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
             color: 'rgba(212,216,207,0.9)',
           }}
         >
-          {`«${d.epitaph}»`}
+          {f.epitaph}
         </div>
 
         <div
@@ -504,10 +511,10 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
           }}
         >
           {[
-            ['Родился', f.born],
-            ['Умер', f.died],
-            ['Прожил', f.lived],
-            ['Коммитов', String(d.commits)],
+            [f.t.born, f.born],
+            [f.t.died, f.died],
+            [f.t.lived, f.lived],
+            [f.t.commits, String(d.commits)],
           ].map(([title, value]) => (
             <div key={title} style={{ display: 'flex', width: 440, marginBottom: 28 }}>
               <Stat title={title} value={value} size={48} />
@@ -517,12 +524,12 @@ function Story({ d, assets }: { d: CertificateData; assets: CertificateAssets })
 
         <div data-reveal="6" style={{ display: 'flex', flexDirection: 'column', width: 880, marginTop: 12 }}>
           <LastWords d={d} f={f} scale={1.7} />
-          <Cause d={d} scale={1.7} marginTop={24} />
+          <Cause d={d} title={f.t.cause} scale={1.7} marginTop={24} />
         </div>
 
         <div data-reveal="6" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'auto' }}>
           <div style={{ display: 'flex', fontFamily: sans, fontWeight: 700, fontSize: 34, color: color.ink }}>
-            Похорони свой репозиторий
+            {f.t.cta}
           </div>
           <div style={{ display: 'flex', marginTop: 10, fontFamily: mono, fontWeight: 700, fontSize: 32, color: color.moss, textShadow: glow }}>
             {d.site}
