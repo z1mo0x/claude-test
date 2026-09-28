@@ -8,8 +8,8 @@ const certificateFonts = [
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    '/r/[owner]/[repo]/certificate.png': certificateFonts,
-    '/opengraph-image': certificateFonts,
+    '/[lang]/r/[owner]/[repo]/certificate.png': certificateFonts,
+    '/og.png': certificateFonts,
   },
 }
 

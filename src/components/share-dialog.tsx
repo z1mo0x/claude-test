@@ -2,6 +2,8 @@
 
 import { useState, type Ref } from 'react'
 import { Check, Copy, Download, ImageIcon, Link2, X } from 'lucide-react'
+import { useI18n } from '@/i18n/client'
+import type { Network } from '@/lib/share'
 
 export const secondary =
   'flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/14 bg-ground/60 px-4 text-[14px] font-semibold transition-colors hover:border-white/30'
@@ -19,25 +21,31 @@ type Props = {
 
 type Copied = 'link' | 'text' | 'image' | 'image-failed' | null
 
+type Post = { url: string; text: string; title: string }
+const e = encodeURIComponent
+
+/** Ссылки для публикации у самих соцсетей. Какие показывать и в каком порядке — в словаре языка. */
+const networks: Record<Network, { name: string; href: (post: Post) => string }> = {
+  telegram: { name: 'Telegram', href: ({ url, text }) => `https://t.me/share/url?url=${e(url)}&text=${e(text)}` },
+  x: { name: 'X', href: ({ url, text }) => `https://x.com/intent/tweet?text=${e(text)}&url=${e(url)}` },
+  vk: { name: 'ВКонтакте', href: ({ url, title }) => `https://vk.com/share.php?url=${e(url)}&title=${e(title)}` },
+  reddit: { name: 'Reddit', href: ({ url, title }) => `https://www.reddit.com/submit?url=${e(url)}&title=${e(title)}` },
+  linkedin: { name: 'LinkedIn', href: ({ url }) => `https://www.linkedin.com/sharing/share-offsite/?url=${e(url)}` },
+  threads: { name: 'Threads', href: ({ url, text }) => `https://www.threads.net/intent/post?text=${e(`${text}\n${url}`)}` },
+  bluesky: { name: 'Bluesky', href: ({ url, text }) => `https://bsky.app/intent/compose?text=${e(`${text}\n${url}`)}` },
+}
+
 /**
  * Попап «Поделиться». Соцсети открываются по их собственным ссылкам для публикации:
  * бесплатно, без SDK и сторонних сервисов. Картинку соцсеть возьмёт из превью ссылки (og:image).
  */
 export function ShareDialog({ ref, url, post, imagePath }: Props) {
+  const { t } = useI18n()
   const [text, setText] = useState(post)
   const [copied, setCopied] = useState<Copied>(null)
   const card = imageUrl(imagePath)
-  const title = text.split('\n')[0]
-  const e = encodeURIComponent
-
-  const targets = [
-    { name: 'Telegram', href: `https://t.me/share/url?url=${e(url)}&text=${e(text)}` },
-    { name: 'X', href: `https://x.com/intent/tweet?text=${e(text)}&url=${e(url)}` },
-    { name: 'ВКонтакте', href: `https://vk.com/share.php?url=${e(url)}&title=${e(title)}` },
-    { name: 'Reddit', href: `https://www.reddit.com/submit?url=${e(url)}&title=${e(title)}` },
-    { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${e(url)}` },
-    { name: 'Threads', href: `https://www.threads.net/intent/post?text=${e(`${text}\n${url}`)}` },
-  ]
+  const shared = { url, text, title: text.split('\n')[0] }
+  const targets = t.share.networks.map((id) => ({ name: networks[id].name, href: networks[id].href(shared) }))
 
   function flash(what: Copied) {
     setCopied(what)
@@ -76,10 +84,10 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
       <div className="flex flex-col gap-6 p-5 pb-[max(20px,env(safe-area-inset-bottom))] md:p-8">
         <div className="flex items-start justify-between gap-4">
           <h2 id="share-title" className="font-serif text-[32px] leading-none font-bold text-bone">
-            Поделиться
+            {t.share.title}
           </h2>
           <form method="dialog">
-            <button aria-label="Закрыть" className="-mt-2 -mr-2 grid size-11 place-items-center rounded-lg text-muted transition-colors hover:text-ink">
+            <button aria-label={t.share.close} className="-mt-2 -mr-2 grid size-11 place-items-center rounded-lg text-muted transition-colors hover:text-ink">
               <X size={20} aria-hidden="true" />
             </button>
           </form>
@@ -90,7 +98,7 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
           <div className="flex flex-col gap-6">
             <img
               src={card}
-              alt="Картинка, которая прикрепится к ссылке"
+              alt={t.share.imageAlt}
               width={1200}
               height={630}
               loading="lazy"
@@ -98,7 +106,7 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
             />
             <div className="flex flex-col gap-2">
               <label htmlFor="share-post" className="text-[14px] font-semibold">
-                Текст поста
+                {t.share.postLabel}
               </label>
               <textarea
                 id="share-post"
@@ -107,7 +115,7 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
                 onChange={(event) => setText(event.target.value)}
                 className="w-full resize-none rounded-[10px] border border-white/14 bg-ground/80 px-4 py-3 text-[15px] leading-relaxed focus:border-moss/60"
               />
-              <p className="font-mono text-[12px] text-muted">&gt; ссылка добавится сама, к ней прикрепится свидетельство</p>
+              <p className="font-mono text-[12px] text-muted">&gt; {t.share.postHint}</p>
             </div>
           </div>
 
@@ -124,30 +132,30 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
               <div className="grid gap-2.5 [&>*]:justify-start">
                 <button type="button" onClick={() => copyText(url, 'link')} className={secondary}>
                   {copied === 'link' ? <Check size={16} aria-hidden="true" /> : <Link2 size={16} aria-hidden="true" />}
-                  {copied === 'link' ? 'Скопировано' : 'Копировать ссылку'}
+                  {copied === 'link' ? t.share.copied : t.share.copyLink}
                 </button>
                 <button type="button" onClick={() => copyText(`${text}\n${url}`, 'text')} className={secondary}>
                   {copied === 'text' ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
-                  {copied === 'text' ? 'Скопировано' : 'Копировать текст'}
+                  {copied === 'text' ? t.share.copied : t.share.copyText}
                 </button>
                 <button type="button" onClick={copyImage} className={secondary}>
                   {copied === 'image' ? <Check size={16} aria-hidden="true" /> : <ImageIcon size={16} aria-hidden="true" />}
-                  {copied === 'image' ? 'Картинка в буфере' : 'Копировать картинку'}
+                  {copied === 'image' ? t.share.imageCopied : t.share.copyImage}
                 </button>
                 <a href={imageUrl(imagePath, 'download')} download className={secondary}>
                   <Download size={16} aria-hidden="true" />
-                  Скачать PNG 1200×630
+                  {t.share.downloadCard}
                 </a>
                 <a href={imageUrl(imagePath, 'format=story', 'download')} download className={secondary}>
                   <Download size={16} aria-hidden="true" />
-                  Скачать для сторис
+                  {t.share.downloadStory}
                 </a>
               </div>
               <p aria-live="polite" className="min-h-5 font-mono text-[12px]">
                 {copied === 'image-failed' ? (
-                  <span className="text-ember">&gt; браузер не дал скопировать картинку, скачай PNG</span>
+                  <span className="text-ember">&gt; {t.share.imageFailed}</span>
                 ) : (
-                  <span className="text-muted">&gt; картинку из буфера можно вставить в Discord, Telegram или X</span>
+                  <span className="text-muted">&gt; {t.share.imageHint}</span>
                 )}
               </p>
             </div>

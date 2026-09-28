@@ -1,3 +1,7 @@
+import type { LookupError } from './errors'
+
+export type { LookupError }
+
 /** Снимок репозитория на момент похорон. Потом он не меняется: свидетельство — документ. */
 export type RepoFacts = {
   /** id репозитория на GitHub. В отличие от owner/name, не меняется при переименовании и передаче. */
@@ -16,7 +20,6 @@ export type RepoFacts = {
   lastWords: string | null
 }
 
-export type LookupError = 'invalid' | 'not_found' | 'rate_limited' | 'unavailable'
 
 type Commit = { commit: { message: string; committer: { date: string } | null } }
 

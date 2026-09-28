@@ -1,13 +1,16 @@
 import { ImageResponse } from 'next/og'
+import type { NextRequest } from 'next/server'
 import { certificateFonts } from '@/certificate/fonts'
 import { imageDataUri } from '@/certificate/server-assets'
 import { typeface } from '@/certificate/typography'
+import { dictionary, toLang } from '@/i18n'
 
-export const alt = 'Projectyard — проводи репозиторий в последний путь'
-export const size = { width: 1200, height: 630 }
-export const contentType = 'image/png'
-
-export default async function Image() {
+/**
+ * Превью главной для соцсетей: /og.png — русская, /og.png?lang=en — английская.
+ * Лежит в корне, а не в app/[lang]: у русской версии нет префикса в адресе.
+ */
+export async function GET(request: NextRequest) {
+  const { og } = dictionary(toLang(request.nextUrl.searchParams.get('lang')))
   const [fonts, banner, logo] = await Promise.all([certificateFonts(), imageDataUri('banner.png'), imageDataUri('logo.png')])
 
   return new ImageResponse(
@@ -45,15 +48,18 @@ export default async function Image() {
             color: '#ece9df',
           }}
         >
-          <div style={{ display: 'flex' }}>Проводи</div>
-          <div style={{ display: 'flex' }}>репозиторий</div>
-          <div style={{ display: 'flex', color: '#a6d47a' }}>в последний путь</div>
+          {og.title.map((line) => (
+            <div key={line} style={{ display: 'flex' }}>
+              {line}
+            </div>
+          ))}
+          <div style={{ display: 'flex', color: '#a6d47a' }}>{og.accent}</div>
         </div>
         <div style={{ display: 'flex', marginTop: 28, fontFamily: typeface.sans, fontWeight: 500, fontSize: 26, color: '#8a928c' }}>
-          Свидетельство о смерти для заброшенного проекта
+          {og.tagline}
         </div>
       </div>
     </div>,
-    { ...size, fonts },
+    { width: 1200, height: 630, fonts, headers: { 'Cache-Control': 'public, max-age=86400, s-maxage=604800' } },
   )
 }

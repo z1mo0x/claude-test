@@ -1,9 +1,12 @@
-import { daysBetween, lifetime } from './format'
+import { dictionary, type Lang } from '@/i18n'
+import { daysBetween } from './format'
+
+/** Соцсети в попапе «Поделиться». Набор и порядок для каждого языка — в словаре. */
+export type Network = 'telegram' | 'x' | 'vk' | 'reddit' | 'linkedin' | 'threads' | 'bluesky'
 
 /** Готовый текст поста, без ссылки: ссылку каждая соцсеть добавляет сама. */
-export function postText(grave: { name: string; bornAt: string; diedAt: string | null }) {
-  const days = grave.diedAt ? daysBetween(grave.bornAt, grave.diedAt) : null
-  const lived = days === null ? '' : `${lifetime(days)} разработки. `
-  const intro = lived.charAt(0).toUpperCase() + lived.slice(1)
-  return `${intro}Сегодня ${grave.name} официально похоронен.\nRIP ${grave.name} ⚰️`
+export function postText(grave: { name: string; bornAt: string; diedAt: string | null }, lang: Lang) {
+  const t = dictionary(lang)
+  const lived = grave.diedAt ? t.format.lifetime(daysBetween(grave.bornAt, grave.diedAt)) : null
+  return t.share.post(grave.name, lived)
 }

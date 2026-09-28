@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react'
 import { formatSize, type CertificateData } from '@/certificate/types'
 import { getVariant } from '@/certificate/variants'
 import { webAssets } from '@/certificate/web-assets'
+import { useI18n } from '@/i18n/client'
 import { CertificateFrame } from './certificate-frame'
 import { GraveyardAir } from './graveyard-air'
 import { SharePanel } from './share-panel'
@@ -24,6 +25,7 @@ type Props = {
 }
 
 export function GraveView({ data, variant, href, url, imagePath, post, fresh }: Props) {
+  const { t, path } = useI18n()
   const reduced = useReducedMotion() ?? false
   // «Печать» играет всем: и после похорон, и тем, кто пришёл по ссылке. Сама анимация
   // в globals.css, при prefers-reduced-motion её выключает там же медиазапрос.
@@ -68,7 +70,7 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
       {/* Свидетельство вписано и по ширине, и по высоте экрана: кнопки под ним видны без прокрутки. */}
       <div className="relative mx-auto flex w-full flex-col gap-6 md:max-w-[max(720px,calc((100dvh-280px)*1200/630))]">
         <p className="glow font-mono text-[14px] font-bold text-moss">
-          &gt; status: BURIED · участок № {data.plot}
+          &gt; {t.grave.status(data.plot)}
         </p>
 
         <motion.figure
@@ -87,7 +89,7 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
             <CertificateFrame {...formatSize.story}>{render(data, 'story', webAssets)}</CertificateFrame>
           </div>
           <figcaption className="sr-only">
-            Свидетельство о смерти репозитория {data.owner}/{data.name}. Причина: {data.cause}. Эпитафия: {data.epitaph}
+            {t.grave.caption(`${data.owner}/${data.name}`, data.cause, data.epitaph)}
           </figcaption>
         </motion.figure>
 
@@ -108,8 +110,8 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
           transition={{ duration: 0.6, delay: reveal ? settled + 0.2 : 0.3 }}
           className="self-start"
         >
-          <Link href="/" className="flex min-h-11 items-center gap-2 font-bold text-moss-light underline-offset-4 hover:underline">
-            {fresh ? 'Похоронить ещё один' : 'Похоронить свой репозиторий'}
+          <Link href={path('/')} className="flex min-h-11 items-center gap-2 font-bold text-moss-light underline-offset-4 hover:underline">
+            {fresh ? t.grave.buryAnother : t.grave.buryYours}
             <ArrowRight size={17} aria-hidden="true" />
           </Link>
         </motion.div>
