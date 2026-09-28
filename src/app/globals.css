@@ -102,6 +102,43 @@ body {
   animation: neon 3.6s ease-in-out infinite;
 }
 
+/* Подложка формы похорон: тёмный камень с трещинами. */
+.stone-panel {
+  background: var(--color-panel) url(/images/form-stone.webp) center / cover;
+}
+
+/*
+ * Кнопка «Похоронить»: каменная плита с зелёной кромкой. border-image режет картинку на
+ * 9 частей, поэтому углы и кромка не растягиваются при любой ширине кнопки. Срезы — отступы
+ * в картинке 1000×162, ширина частей — те же отступы в масштабе высоты кнопки 60px.
+ * При наведении плита чуть проседает, и тень под ней сжимается.
+ */
+.stone-button {
+  border-style: solid;
+  border-width: 7px 31px;
+  border-image: url(/images/button-stone.webp) 20 85 fill / 7px 31px stretch;
+  color: var(--color-moss-light);
+  text-shadow:
+    0 1px 1px rgb(0 0 0 / 0.8),
+    0 0 10px rgb(120 184 90 / 0.55);
+  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 0.55));
+  transition:
+    transform 150ms ease-out,
+    filter 150ms ease-out;
+}
+
+@media (hover: hover) {
+  .stone-button:enabled:hover {
+    transform: translateY(2px);
+    filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.6)) brightness(1.06);
+  }
+}
+
+.stone-button:enabled:active {
+  transform: translateY(3px) scale(0.99);
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.7)) brightness(0.96);
+}
+
 /*
  * Появление свидетельства на его странице: блоки проступают по очереди, в конце падает
  * печать «ПОХОРОНЕН», карточка вздрагивает, от печати расходятся кольцо и пыль.
