@@ -29,6 +29,32 @@ type Found =
 const input =
   'h-13 w-full rounded-[10px] border border-white/14 bg-ground/80 px-4 font-mono text-[15px] text-ink placeholder:text-muted/80 focus:border-moss/60'
 
+/**
+ * Кнопка выбора в ряду: причина смерти, оформление. Выбранная пишется жирным, и чтобы ряд
+ * не перестраивался, под жирный текст место занято заранее невидимой копией подписи.
+ */
+function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={
+        selected
+          ? 'min-h-11 rounded-full border border-moss bg-moss/14 px-4 text-[14px] font-bold text-moss-light'
+          : 'min-h-11 rounded-full border border-white/14 px-4 text-[14px] text-ink/80 transition-colors hover:border-white/30'
+      }
+    >
+      <span className="grid text-center">
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1 font-bold">
+          {children}
+        </span>
+        <span className="col-start-1 row-start-1">{children}</span>
+      </span>
+    </button>
+  )
+}
+
 function Step({ n, children, htmlFor }: { n: string; children: ReactNode; htmlFor?: string }) {
   const Tag = htmlFor ? 'label' : 'span'
   return (
@@ -222,19 +248,9 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
           </legend>
           <div className="flex flex-wrap gap-2">
             {causeIds.map((id) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={cause === id}
-                onClick={() => setCause(id)}
-                className={
-                  cause === id
-                    ? 'min-h-11 rounded-full border border-moss bg-moss/14 px-4 text-[14px] font-bold text-moss-light'
-                    : 'min-h-11 rounded-full border border-white/14 px-4 text-[14px] text-ink/80 transition-colors hover:border-white/30'
-                }
-              >
+              <Chip key={id} selected={cause === id} onClick={() => setCause(id)}>
                 {t.causes[id]}
-              </button>
+              </Chip>
             ))}
           </div>
         </fieldset>
@@ -305,19 +321,9 @@ export function BuryForm({ nextPlot }: { nextPlot: number }) {
             </legend>
             <div className="flex flex-wrap gap-2">
               {variants.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={variant === item.id}
-                  onClick={() => setVariant(item.id)}
-                  className={
-                    variant === item.id
-                      ? 'min-h-11 rounded-full border border-moss bg-moss/14 px-4 text-[14px] font-bold text-moss-light'
-                      : 'min-h-11 rounded-full border border-white/14 px-4 text-[14px] text-ink/80'
-                  }
-                >
+                <Chip key={item.id} selected={variant === item.id} onClick={() => setVariant(item.id)}>
                   {item.title}
-                </button>
+                </Chip>
               ))}
             </div>
           </fieldset>
