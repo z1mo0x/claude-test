@@ -102,9 +102,23 @@ body {
   animation: neon 3.6s ease-in-out infinite;
 }
 
-/* Подложка формы похорон: тёмный камень с трещинами. */
+/*
+ * Подложка формы похорон: тёмный камень. Картинка — бесшовный тайл 800×600 из центра фотографии
+ * камня. Он повторяется, а не растягивается на всю форму, поэтому зерно остаётся чётким.
+ * Сверху лёгкая виньетка, как на исходной фотографии.
+ */
 .stone-panel {
-  background: var(--color-panel) url(/images/form-stone.webp) center / cover;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgb(3 7 8 / 0) 45%, rgb(3 7 8 / 0.55) 100%),
+    url(/images/form-stone.webp) 0 0 / 600px 450px repeat var(--color-panel);
+}
+
+/* Tailwind 4 убрал курсор-руку у кнопок, возвращаем для всех активных. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
 }
 
 /*
