@@ -8,6 +8,7 @@ import { bar, code, esc, i } from './html'
 import { dayKey, moscow } from './publisher'
 import { POSTS } from './schedule'
 import { tg, type InlineButton } from './telegram'
+import { trafficStats, type Traffic } from './traffic'
 import { back, type View } from './view'
 
 const DAY = 86_400_000
@@ -66,9 +67,20 @@ async function channelBlock(now: number) {
   return lines
 }
 
+/** Посетители и источники из Яндекс.Метрики. Vercel Analytics API не даёт, поэтому источник цифр один. */
+function trafficBlock(traffic: Traffic) {
+  if (!traffic.ok) return [`🌐 <b>Трафик</b> · Метрика`, i(`недоступен: ${traffic.reason}`)]
+  const line = (label: string, t: { visits: number; users: number; pageviews: number }) =>
+    `${label}: <b>${t.users}</b> ${plural(t.users, ['посетитель', 'посетителя', 'посетителей'])} · ${t.visits} ${plural(t.visits, ['визит', 'визита', 'визитов'])} · ${t.pageviews} просм.`
+  const sources = traffic.sources.length
+    ? traffic.sources.map((source) => `${esc(source.name)} <b>${source.visits}</b>`).join(' · ')
+    : i('пока нет данных')
+  return [`🌐 <b>Трафик</b> · Метрика`, line('Сегодня', traffic.today), line('7 дней', traffic.week), `Источники (utm_source, 7 дней): ${sources}`]
+}
+
 /** Экран «Метрики»: могилы, причины, обращения, посты и канал. Данные сайта считаются на лету по базе. */
 export async function metricsView(now = Date.now()): Promise<View> {
-  const [graves, reports, statuses, channel] = await Promise.all([allGraves(), reportTotals(), postStatuses(), channelBlock(now)])
+  const [graves, reports, statuses, channel, traffic] = await Promise.all([allGraves(), reportTotals(), postStatuses(), channelBlock(now), trafficStats()])
 
   const perDay = new Map<string, number>()
   for (const grave of graves) {
@@ -118,7 +130,7 @@ export async function metricsView(now = Date.now()): Promise<View> {
     `📋 <b>Обращения</b>: новых <b>${reports.new}</b> · рассмотрено ${reports.done} · отклонено ${reports.rejected}`,
     `🗓 <b>Посты</b>: отправлено <b>${sent}</b> из ${POSTS.length}${failed ? ` · ⚠️ ошибок ${failed} ${plural(failed, ['пост', 'поста', 'постов'])}` : ''}`,
     '',
-    `🌐 ${i('Посетителей и источники смотри в Vercel Analytics: у него нет API, бот их не видит.')}`,
+    ...trafficBlock(traffic),
   ]
 
   const { analyticsUrl } = botEnv()

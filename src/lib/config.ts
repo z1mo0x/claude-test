@@ -25,3 +25,9 @@ export const LOOKUPS_PER_MINUTE = 30
 
 /** У заброшенного пет-проекта столько звёзд не бывает. Защита от похорон чужих известных проектов. */
 export const FAMOUS_STARS = 1000
+
+/**
+ * Номер счётчика Яндекс.Метрики. Не секрет: он виден в коде страницы. Пустая NEXT_PUBLIC_YANDEX_METRIKA_ID
+ * (в Vercel) выключает счётчик, например для превью-деплоев. Счётчик подключается только в продакшене.
+ */
+export const YANDEX_METRIKA_ID = process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID ?? '113211941'

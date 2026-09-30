@@ -301,7 +301,7 @@ async function showPost(chat: number, id: string) {
     return void (await sendMessage(chat, `Такого поста нет. Список: ${POSTS.map((p) => code(p.id)).join(', ')}`))
   }
   const env = botEnv()
-  const { facts } = await collectFacts()
+  const { facts } = await collectFacts(true)
   const body = render(post.text, facts, env.site)
   const photo = post.photo ? render(post.photo, facts, env.site) : null
   const missing = [...body.missing, ...(photo?.missing ?? [])]
@@ -342,7 +342,7 @@ async function handlePostAction(chat: number, action: string, id: string): Promi
     return 'Отмечено'
   }
   if (action === 'pub') {
-    const { facts } = await collectFacts()
+    const { facts } = await collectFacts(true)
     const outcome = await deliver(post, facts)
     if (outcome.ok) {
       await markPost(id, 'sent', `вручную: ${outcome.note}`)

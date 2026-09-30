@@ -111,7 +111,7 @@ export async function runDue(now = Date.now()) {
   })
   if (!due.length) return { sent: [] as string[] }
 
-  const { facts } = await collectFacts()
+  const { facts } = await collectFacts(true)
   const sent: string[] = []
   for (const post of due) {
     if (!(await claimPost(post.id))) continue

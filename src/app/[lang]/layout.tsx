@@ -17,6 +17,7 @@ import { defaultLang, dictionary, isLang, langs, languageAlternates, localePath,
 import { I18nProvider } from '@/i18n/client'
 import { siteUrl } from '@/lib/site-url'
 import { Analytics } from '@vercel/analytics/next'
+import { YandexMetrika } from '@/components/yandex-metrika'
 
 type Props = { params: Promise<{ lang: string }> }
 
@@ -58,6 +59,7 @@ export default async function RootLayout({ children, params }: Props & { childre
           {children}
         </I18nProvider>
         <Analytics />
+        <YandexMetrika />
       </body>
     </html>
   )
