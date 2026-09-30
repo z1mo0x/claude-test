@@ -50,6 +50,9 @@ export default async function GravePage({ params, searchParams }: Props) {
 
   const base = await siteUrl()
   const href = localePath(lang, gravePath(grave.owner, grave.name))
+  const badgePath = `/badge/${grave.owner}/${grave.name}.svg?lang=${lang}`
+  // Метка utm_source: в Vercel Analytics видно, сколько людей пришло с README.
+  const badgeMarkdown = `[![${dictionary(lang).badge.alt}](${base}${badgePath})](${base}${href}?utm_source=badge)`
 
   return (
     <GraveView
@@ -59,6 +62,7 @@ export default async function GravePage({ params, searchParams }: Props) {
       url={`${base}${href}`}
       imagePath={`${href}/certificate.png`}
       post={postText(grave, lang)}
+      badge={{ src: badgePath, markdown: badgeMarkdown }}
       fresh={buried === '1'}
     />
   )

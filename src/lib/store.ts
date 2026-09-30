@@ -19,6 +19,16 @@ export type Grave = RepoFacts & {
 
 export type NewGrave = Omit<Grave, 'id' | 'createdAt'>
 
+export type ReportKind = 'remove_own' | 'complaint'
+
+export type NewReport = {
+  slug: string
+  kind: ReportKind
+  reason: string
+  contact: string | null
+  ipHash: string
+}
+
 export interface GraveStore {
   count(): Promise<number>
   find(slug: string): Promise<Grave | null>
@@ -29,6 +39,10 @@ export interface GraveStore {
   /** Сколько похорон было с этого IP (по хешу) после since. */
   recentBurials(ipHash: string, since: Date): Promise<number>
   logBurial(ipHash: string): Promise<void>
+  /** Обращение «удалить или пожаловаться». Читает и разбирает их бот владельца, сайт только пишет. */
+  createReport(report: NewReport): Promise<void>
+  /** Сколько обращений было с этого IP (по хешу) после since. */
+  recentReports(ipHash: string, since: Date): Promise<number>
   /** Все могилы с этого сайта, новые первыми. Для sitemap.xml и llms.txt. */
   list(): Promise<{ owner: string; name: string; createdAt: string }[]>
 }
@@ -132,6 +146,27 @@ function supabaseStore(url: string, key: string): GraveStore {
       if (projects.error) throw projects.error
       const log = await db.from('bury_log').select('id').limit(1)
       if (log.error) throw log.error
+      const reports = await db.from('reports').select('id').limit(1)
+      if (reports.error) throw reports.error
+    },
+    async createReport(report) {
+      const { error } = await db.from('reports').insert({
+        slug: report.slug,
+        kind: report.kind,
+        reason: report.reason,
+        contact: report.contact,
+        ip_hash: report.ipHash,
+      })
+      if (error) throw error
+    },
+    async recentReports(ipHash, since) {
+      const { count, error } = await db
+        .from('reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('ip_hash', ipHash)
+        .gte('created_at', since.toISOString())
+      if (error) throw error
+      return count ?? 0
     },
     async recentBurials(ipHash, since) {
       const { count, error } = await db

@@ -8,8 +8,10 @@ import { formatSize, type CertificateData } from '@/certificate/types'
 import { getVariant } from '@/certificate/variants'
 import { webAssets } from '@/certificate/web-assets'
 import { useI18n } from '@/i18n/client'
+import { BadgePanel } from './badge-panel'
 import { CertificateFrame } from './certificate-frame'
 import { GraveyardAir } from './graveyard-air'
+import { ReportDialog } from './report-dialog'
 import { SharePanel } from './share-panel'
 
 type Props = {
@@ -20,11 +22,12 @@ type Props = {
   url: string
   imagePath: string
   post: string
+  badge: { src: string; markdown: string }
   /** Пришли прямо со сцены похорон: показываем свидетельство с раскрытием. */
   fresh: boolean
 }
 
-export function GraveView({ data, variant, href, url, imagePath, post, fresh }: Props) {
+export function GraveView({ data, variant, href, url, imagePath, post, badge, fresh }: Props) {
   const { t, path } = useI18n()
   const reduced = useReducedMotion() ?? false
   // «Печать» играет всем: и после похорон, и тем, кто пришёл по ссылке. Сама анимация
@@ -107,13 +110,22 @@ export function GraveView({ data, variant, href, url, imagePath, post, fresh }: 
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: reveal ? settled + 0.1 : 0.25 }}
+        >
+          <BadgePanel {...badge} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: reveal ? settled + 0.2 : 0.3 }}
-          className="self-start"
+          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1"
         >
           <Link href={path('/')} className="flex min-h-11 items-center gap-2 font-bold text-moss-light underline-offset-4 hover:underline">
             {fresh ? t.grave.buryAnother : t.grave.buryYours}
             <ArrowRight size={17} aria-hidden="true" />
           </Link>
+          <ReportDialog owner={data.owner} name={data.name} />
         </motion.div>
       </div>
 
