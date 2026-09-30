@@ -27,6 +27,8 @@ export type NewReport = {
   reason: string
   contact: string | null
   ipHash: string
+  /** Одноразовый токен для ссылки «получить ответ в Telegram»: по нему бот узнаёт, чей это чат. */
+  replyToken?: string
 }
 
 export interface GraveStore {
@@ -158,6 +160,7 @@ function supabaseStore(url: string, key: string): GraveStore {
           reason: report.reason,
           contact: report.contact,
           ip_hash: report.ipHash,
+          ...(report.replyToken ? { reply_token: report.replyToken } : {}),
         })
         .select('id')
         .single()

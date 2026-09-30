@@ -166,6 +166,8 @@ export const en: Dictionary = {
     submit: 'Send',
     sending: 'Sending…',
     done: 'Done. We got your request and will go through it by hand.',
+    telegram: 'Get the reply in Telegram',
+    telegramHint: 'Press Start in the bot and it will message you when the request is reviewed. Without this there will be no reply.',
     errors: {
       bad_input: 'Pick what happened and describe it in a few words',
       not_found: 'This grave does not exist. Refresh the page',

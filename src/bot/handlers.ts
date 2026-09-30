@@ -19,9 +19,16 @@ import { render } from './render'
 import { POSTS } from './schedule'
 import { collectFacts } from './stats'
 import { answerCallback, editMessage, notifyOwner, sendMessage, sendMessages, tg, type InlineButton, type Markup } from './telegram'
+import { handleUserCallback, handleUserMessage, tellReporter, verdictText } from './user'
 
-type Message = { message_id: number; chat: { id: number }; from?: { id: number }; text?: string }
-type Callback = { id: string; from: { id: number }; data?: string; message?: Message }
+type Message = {
+  message_id: number
+  chat: { id: number }
+  from?: { id: number; username?: string }
+  text?: string
+  reply_to_message?: { text?: string }
+}
+type Callback = { id: string; from: { id: number; username?: string }; data?: string; message?: Message }
 export type Update = { message?: Message; callback_query?: Callback }
 
 const BTN_REPORTS = '📋 Жалобы'
@@ -80,15 +87,16 @@ export async function handleUpdate(update: Update) {
     await sendMessage(chat, `Твой Telegram id: ${code(String(message.from?.id))}\nВпиши его в Vercel как <code>OWNER_TELEGRAM_ID</code> и сделай Redeploy.`)
     return
   }
-  if (!isOwner(message.from?.id)) {
-    await sendMessage(chat, '🔒 Это личный бот.')
-    return
-  }
+  // Ссылка «получить ответ» со страницы сайта работает у всех, включая владельца.
+  // Всё остальное у обычных людей своё: ник GitHub, их могилы и обращения (src/bot/user.ts).
+  if (/^\/start\s+r_/.test(text) || !isOwner(message.from?.id)) return handleUserMessage({ chat, text })
 
   if (text === '/start' || text === '/help') {
     await registerMenu(chat)
     return void (await sendMessage(chat, HELP, MENU))
   }
+  const replyTo = message.reply_to_message?.text
+  if (replyTo && !text.startsWith('/')) return replyToReporter(chat, replyTo, text)
   if (text === '/testchannel') return testChannel(chat)
   if (text === '/complaints' || text.includes('Жалобы')) return showReports(chat)
   if (text === '/next' || text.includes('Ближайшие')) return showNext(chat)
@@ -108,7 +116,29 @@ function reportText(r: ReportRow) {
     '',
     `<blockquote>${esc(r.reason)}</blockquote>`,
     r.contact ? `👤 ${esc(r.contact)}` : i('контакт не указан'),
-  ].join('\n')
+    r.tg_chat_id ? '📨 Telegram привязан: ответь на это сообщение, и я перешлю ответ человеку' : '',
+  ]
+    .filter((line, index) => line || index === 2)
+    .join('\n')
+}
+
+/** Обычный ответ (reply) владельца на карточку обращения уходит человеку в его чат. */
+async function replyToReporter(chat: number, card: string, text: string) {
+  const id = /(?:Запрос на удаление|Жалоба)\s+#(\d+)/.exec(card)?.[1]
+  if (!id) return void (await sendMessage(chat, i('Чтобы ответить человеку, ответь (reply) на карточку обращения.'), MENU))
+  const report = await reportById(Number(id))
+  if (!report) return void (await sendMessage(chat, `⚠️ Обращения #${esc(id)} нет.`, MENU))
+  if (!report.tg_chat_id) {
+    return void (await sendMessage(chat, `⚠️ По #${report.id} человек не привязал Telegram, ответить некому. Контакт: ${report.contact ? esc(report.contact) : 'не указан'}.`, MENU))
+  }
+  const sent = await tellReporter(report, verdictText.reply(report, text))
+  await sendMessage(chat, sent ? `✉️ Отправил ответ по #${report.id}.` : `⚠️ Не вышло: человек закрыл бота или чат недоступен.`, MENU)
+}
+
+/** Сообщает человеку итог, если он привязал Telegram, и возвращает строку для карточки владельца. */
+async function notifyVerdict(report: ReportRow, html: string) {
+  if (!report.tg_chat_id) return ''
+  return (await tellReporter(report, html)) ? '\n📨 Человеку отправлено' : '\n⚠️ Написать человеку не вышло'
 }
 
 function reportButtons(r: ReportRow): Markup {
@@ -172,12 +202,14 @@ async function handleReportAction(chat: number, messageId: number, action: strin
     const removed = await deleteGrave(report.slug)
     await setReportStatus(id, 'done')
     revalidateSite()
-    await editMessage(chat, messageId, `${reportText(report)}\n\n🗑 <b>${removed ? 'Могила удалена' : 'Могилы уже не было'}.</b> Обращение закрыто.`)
+    const told = await notifyVerdict(report, verdictText.removed(report))
+    await editMessage(chat, messageId, `${reportText(report)}\n\n🗑 <b>${removed ? 'Могила удалена' : 'Могилы уже не было'}.</b> Обращение закрыто.${told}`)
     return undefined
   }
   if (action === 'done' || action === 'rej') {
     await setReportStatus(id, action === 'done' ? 'done' : 'rejected')
-    await editMessage(chat, messageId, `${reportText(report)}\n\n${action === 'done' ? '✅ <b>Готово</b>' : '🚫 <b>Отклонено</b>'}`)
+    const told = await notifyVerdict(report, action === 'done' ? verdictText.done(report) : verdictText.rejected(report))
+    await editMessage(chat, messageId, `${reportText(report)}\n\n${action === 'done' ? '✅ <b>Готово</b>' : '🚫 <b>Отклонено</b>'}${told}`)
   }
   return undefined
 }
@@ -345,9 +377,17 @@ async function showStats(chat: number) {
 // ── Кнопки под сообщениями ─────────────────────────────────────────────────
 
 async function handleCallback(query: Callback) {
-  if (!isOwner(query.from.id) || !query.message) return void (await answerCallback(query.id))
+  if (!query.message) return void (await answerCallback(query.id))
   const chat = query.message.chat.id
   const [kind, action, id] = (query.data ?? '').split(':')
+  if (!isOwner(query.from.id)) {
+    // Обычным людям доступны только их кнопки (u:…), всё владельческое молча игнорируется.
+    if (kind !== 'u') return void (await answerCallback(query.id))
+    return handleUserCallback(
+      { id: query.id, chat, messageId: query.message.message_id, data: query.data ?? '', username: query.from.username },
+      announceReport,
+    )
+  }
   let answer: string | undefined
   if (kind === 'r') answer = await handleReportAction(chat, query.message.message_id, action, Number(id))
   else if (kind === 'p') answer = await handlePostAction(chat, action, id)

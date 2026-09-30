@@ -17,6 +17,8 @@ export type ReportRow = {
   reason: string
   contact: string | null
   status: 'new' | 'done' | 'rejected'
+  /** Чат, которому бот отвечает по этому обращению. Пусто, если человек не привязал Telegram. */
+  tg_chat_id: number | null
 }
 
 export async function newReports(limit = 5) {
@@ -49,7 +51,98 @@ export async function deleteGrave(slug: string) {
   return data.length
 }
 
-export type PostStatus = { status: 'sent' | 'failed'; note: string | null }
+// ── Обычные люди: ник GitHub, могилы, обращения ─────────────────────────────
+
+export async function linkedLogin(chat: number) {
+  const { data, error } = await client().from('bot_users').select('github_login').eq('tg_chat_id', chat).maybeSingle()
+  if (error) throw error
+  return (data as { github_login: string } | null)?.github_login ?? null
+}
+
+export async function linkLogin(chat: number, login: string) {
+  const { error } = await client().from('bot_users').upsert({ tg_chat_id: chat, github_login: login })
+  if (error) throw error
+}
+
+export async function unlinkLogin(chat: number) {
+  const { error } = await client().from('bot_users').delete().eq('tg_chat_id', chat)
+  if (error) throw error
+}
+
+export type UserGrave = { id: number; slug: string; repo_owner: string; repo_name: string; born_at: string; died_at: string | null }
+
+/**
+ * Могилы человека: где он владелец репозитория или указал себя при захоронении.
+ * Ник проверен регуляркой (только буквы, цифры и дефис), поэтому в фильтр он попадает как есть; ilike без масок — сравнение без учёта регистра.
+ */
+export async function gravesOfLogin(login: string) {
+  const { data, error } = await client()
+    .from('projects')
+    .select('id, slug, repo_owner, repo_name, born_at, died_at')
+    .eq('source', 'bury')
+    .or(`repo_owner.ilike.${login},buried_by.ilike.${login}`)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  if (error) throw error
+  return data as UserGrave[]
+}
+
+export async function graveOfLogin(login: string, id: number) {
+  return (await gravesOfLogin(login)).find((grave) => grave.id === id) ?? null
+}
+
+export async function reportsOfChat(chat: number, limit = 10) {
+  const { data, error } = await client().from('reports').select('*').eq('tg_chat_id', chat).order('created_at', { ascending: false }).limit(limit)
+  if (error) throw error
+  return data as ReportRow[]
+}
+
+/** Привязывает чат к обращению по токену из ссылки. 'taken' — токен уже использован другим чатом, 'unknown' — такого токена нет. */
+export async function bindReport(token: string, chat: number): Promise<{ status: 'ok'; report: ReportRow } | { status: 'taken' | 'unknown' }> {
+  const { data, error } = await client().from('reports').select('*').eq('reply_token', token).maybeSingle()
+  if (error) throw error
+  const report = data as ReportRow | null
+  if (!report) return { status: 'unknown' }
+  if (report.tg_chat_id !== null && report.tg_chat_id !== chat) return { status: 'taken' }
+  if (report.tg_chat_id === null) {
+    const { error: updateError } = await client().from('reports').update({ tg_chat_id: chat }).eq('id', report.id)
+    if (updateError) throw updateError
+  }
+  return { status: 'ok', report: { ...report, tg_chat_id: chat } }
+}
+
+export async function createBotReport(report: { slug: string; reason: string; contact: string | null; chat: number; ipHash: string }) {
+  const { data, error } = await client()
+    .from('reports')
+    .insert({ slug: report.slug, kind: 'remove_own', reason: report.reason, contact: report.contact, ip_hash: report.ipHash, tg_chat_id: report.chat })
+    .select('id')
+    .single()
+  if (error) throw error
+  return (data as { id: number }).id
+}
+
+export async function countReportsSince(chat: number, since: Date) {
+  const { count, error } = await client()
+    .from('reports')
+    .select('id', { count: 'exact', head: true })
+    .eq('tg_chat_id', chat)
+    .gte('created_at', since.toISOString())
+  if (error) throw error
+  return count ?? 0
+}
+
+export async function hasOpenReport(chat: number, slug: string) {
+  const { count, error } = await client()
+    .from('reports')
+    .select('id', { count: 'exact', head: true })
+    .eq('tg_chat_id', chat)
+    .eq('slug', slug)
+    .eq('status', 'new')
+  if (error) throw error
+  return (count ?? 0) > 0
+}
+
+export type PostStatus ={ status: 'sent' | 'failed'; note: string | null }
 
 export async function postStatuses() {
   const { data, error } = await client().from('bot_posts').select('post_id, status, note')
