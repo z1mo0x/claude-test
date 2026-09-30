@@ -40,7 +40,7 @@ export interface GraveStore {
   recentBurials(ipHash: string, since: Date): Promise<number>
   logBurial(ipHash: string): Promise<void>
   /** Обращение «удалить или пожаловаться». Читает и разбирает их бот владельца, сайт только пишет. */
-  createReport(report: NewReport): Promise<void>
+  createReport(report: NewReport): Promise<number>
   /** Сколько обращений было с этого IP (по хешу) после since. */
   recentReports(ipHash: string, since: Date): Promise<number>
   /** Все могилы с этого сайта, новые первыми. Для sitemap.xml и llms.txt. */
@@ -150,14 +150,19 @@ function supabaseStore(url: string, key: string): GraveStore {
       if (reports.error) throw reports.error
     },
     async createReport(report) {
-      const { error } = await db.from('reports').insert({
-        slug: report.slug,
-        kind: report.kind,
-        reason: report.reason,
-        contact: report.contact,
-        ip_hash: report.ipHash,
-      })
+      const { data, error } = await db
+        .from('reports')
+        .insert({
+          slug: report.slug,
+          kind: report.kind,
+          reason: report.reason,
+          contact: report.contact,
+          ip_hash: report.ipHash,
+        })
+        .select('id')
+        .single()
       if (error) throw error
+      return (data as { id: number }).id
     },
     async recentReports(ipHash, since) {
       const { count, error } = await db
