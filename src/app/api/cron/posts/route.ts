@@ -14,8 +14,11 @@ function same(a: string, b: string) {
  */
 export async function POST(request: Request) {
   const { cronSecret } = botEnv()
-  const given = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  if (!cronSecret || !same(given, cronSecret)) return new Response('forbidden', { status: 403 })
+  const given = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
+  // Причина в теле ответа: GitHub Actions печатает его в лог, по нему видно, что чинить. Сам секрет не раскрывается.
+  if (!cronSecret) return new Response('forbidden: на сайте не задан CRON_SECRET (или нет Redeploy после его добавления)', { status: 403 })
+  if (!given) return new Response('forbidden: в запросе нет секрета', { status: 403 })
+  if (!same(given, cronSecret)) return new Response('forbidden: секрет в запросе не совпадает с CRON_SECRET на сайте', { status: 403 })
 
   try {
     return Response.json({ ok: true, ...(await runDue()) })
