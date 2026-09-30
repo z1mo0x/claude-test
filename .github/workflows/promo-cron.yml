@@ -21,6 +21,11 @@ jobs:
             echo "Задай переменную SITE_URL и секрет CRON_SECRET в Settings → Secrets and variables → Actions"
             exit 1
           fi
-          curl --fail --silent --show-error --max-time 60 -X POST \
+          status=$(curl --silent --show-error --max-time 60 -X POST \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "$SITE_URL/api/cron/posts"
+            -o response.txt -w "%{http_code}" \
+            "$SITE_URL/api/cron/posts" || true)
+          echo "HTTP $status"
+          cat response.txt || true
+          echo
+          [ "$status" = "200" ]
