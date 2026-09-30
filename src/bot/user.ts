@@ -49,6 +49,20 @@ const STATUS: Record<ReportRow['status'], { icon: string; label: string }> = {
 
 const contactOf = (chat: number, username?: string) => (username ? `Telegram: @${username}` : `Telegram id ${chat}`)
 
+/**
+ * Ник владельца сайта привязывается только к его чату: иначе любой мог бы выдать себя за него и
+ * слать запросы на удаление его могил. Ник в остальном никто не проверяет.
+ */
+const isOwnersLogin = (chat: number, login: string) => {
+  const { ownerLogin, ownerId } = botEnv()
+  return Boolean(ownerLogin) && ownerLogin.toLowerCase() === login.toLowerCase() && String(chat) !== ownerId
+}
+
+const reservedView = (login: string): View => ({
+  html: `🔒 Ник ${code(login)} закреплён за владельцем сайта, привязать его нельзя. Если это твой ник, напиши владельцу через форму «Удалить или пожаловаться» на сайте.`,
+  markup: { inline_keyboard: [back('u:home', '← В меню')] },
+})
+
 const HOME = 'u:home'
 const toReports: Markup = { inline_keyboard: [[{ text: '📨 Мои обращения', callback_data: 'u:reports' }]] }
 
@@ -99,6 +113,8 @@ async function gravesView(chat: number, intro = ''): Promise<View> {
       markup: { inline_keyboard: [back(HOME)] },
     }
   }
+  // Ник мог быть привязан раньше, чем стал закреплённым за владельцем: показывать его могилы уже нельзя.
+  if (isOwnersLogin(chat, login)) return reservedView(login)
   const graves = await gravesOfLogin(login)
   if (!graves.length) {
     return {
@@ -158,6 +174,7 @@ export async function handleUserMessage({ chat, text }: UserMessage) {
 }
 
 async function linkFlow(chat: number, login: string) {
+  if (isOwnersLogin(chat, login)) return present(chat, undefined, reservedView(login))
   const graves = await gravesOfLogin(login)
   if (!graves.length) {
     return present(chat, undefined, {
@@ -200,7 +217,7 @@ export async function handleUserCallback(query: UserCallback, announce: (id: num
   else if (action === 'rm' || action === 'rmok') {
     const login = await linkedLogin(chat)
     const grave = login && Number.isFinite(id) ? await graveOfLogin(login, id) : null
-    if (!grave || !login) {
+    if (!grave || !login || isOwnersLogin(chat, login)) {
       answer = 'Могила не найдена. Обнови список'
     } else if (action === 'rm') {
       await show({
@@ -218,8 +235,8 @@ export async function handleUserCallback(query: UserCallback, announce: (id: num
         slug: grave.slug,
         // Ник в боте никто не проверяет, поэтому владельцу сайта явно видно, совпадает ли он с владельцем репозитория.
         reason: `Запрос из бота убрать могилу. GitHub, указанный в боте: ${login} (${
-          grave.repo_owner.toLowerCase() === login.toLowerCase() ? 'совпадает с владельцем репозитория' : `не владелец репозитория (${grave.repo_owner}), а похоронил могилу`
-        }).`,
+          grave.repo_owner.toLowerCase() === login.toLowerCase() ? 'ник совпадает с владельцем репозитория' : `ник не совпадает с владельцем репозитория (${grave.repo_owner}), человек его похоронил`
+        }). Ник не проверен: перед удалением убедись, что пишет действительно владелец.`,
         contact: contactOf(chat, query.username),
         chat,
         ipHash: ipHash(`tg:${chat}`),
