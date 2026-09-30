@@ -108,7 +108,7 @@ function Seal({ text, size, style }: { text: string; size: number; style: CSSPro
         <div style={{ display: 'flex', marginTop: size * 0.04, fontFamily: serif, fontWeight: 700, fontSize: size * 0.1, letterSpacing: 2 }}>
           {text}
         </div>
-        <div style={{ display: 'flex', fontFamily: mono, fontWeight: 700, fontSize: size * 0.08 }}>R.I.C.</div>
+        <div style={{ display: 'flex', fontFamily: mono, fontWeight: 700, fontSize: size * 0.08 }}>R.I.P.</div>
       </div>
     </div>
   )
