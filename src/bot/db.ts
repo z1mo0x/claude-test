@@ -157,6 +157,7 @@ export async function markPost(id: string, status: PostStatus['status'], note: s
 }
 
 export type GraveRow = {
+  created_at: string
   repo_owner: string
   repo_name: string
   born_at: string
@@ -170,11 +171,39 @@ export type GraveRow = {
 export async function allGraves() {
   const { data, error } = await client()
     .from('projects')
-    .select('repo_owner, repo_name, born_at, died_at, commits, last_words, cause, buried_by')
+    .select('created_at, repo_owner, repo_name, born_at, died_at, commits, last_words, cause, buried_by')
     .eq('source', 'bury')
     .limit(5000)
   if (error) throw error
   return data as GraveRow[]
+}
+
+/** Сколько обращений в каждом статусе. */
+export async function reportTotals() {
+  const { data, error } = await client().from('reports').select('status').limit(5000)
+  if (error) throw error
+  const totals = { new: 0, done: 0, rejected: 0 }
+  for (const row of data as { status: keyof typeof totals }[]) totals[row.status] += 1
+  return totals
+}
+
+/** Записывает число подписчиков канала за день (по Москве, YYYY-MM-DD). */
+export async function saveSubscribers(day: string, subscribers: number) {
+  const { error } = await client().from('channel_stats').upsert({ day, subscribers })
+  if (error) throw error
+}
+
+export async function hasSubscribers(day: string) {
+  const { count, error } = await client().from('channel_stats').select('day', { count: 'exact', head: true }).eq('day', day)
+  if (error) throw error
+  return (count ?? 0) > 0
+}
+
+/** Самая ранняя запись начиная с дня from: с чем сравнивать сегодняшнее число подписчиков. */
+export async function subscribersFrom(from: string) {
+  const { data, error } = await client().from('channel_stats').select('day, subscribers').gte('day', from).order('day').limit(1)
+  if (error) throw error
+  return (data as { day: string; subscribers: number }[])[0] ?? null
 }
 
 /**

@@ -15,6 +15,7 @@ import {
 import { botEnv } from './env'
 import { code, esc, i, pack, postBlocks, postToHtml, bar } from './html'
 import { calendarDay, dayLabel, deliver, dueAt, linkButton, moscow, moscowTime } from './publisher'
+import { metricsView } from './metrics'
 import { render } from './render'
 import { POSTS } from './schedule'
 import { collectFacts } from './stats'
@@ -37,6 +38,7 @@ const COMMANDS = [
   { command: 'complaints', description: 'Жалобы и обращения с сайта' },
   { command: 'next', description: 'Ближайшие посты' },
   { command: 'stats', description: 'Статистика и состояние бота' },
+  { command: 'metrics', description: 'Метрики: могилы, канал, обращения' },
   { command: 'post', description: 'Предпросмотр поста: /post id' },
   { command: 'testchannel', description: 'Проверить публикацию в канал' },
   { command: 'help', description: 'Помощь' },
@@ -56,6 +58,7 @@ const HELP = [
   '',
   '📋 <b>Жалобы</b> — обращения «удалить или пожаловаться»',
   '🗓 <b>Календарь</b> — ближайшие посты',
+  '📈 <b>Метрики</b> — рост могил, причины, канал, обращения',
   '📊 <b>Статистика</b> — счётчик и состояние бота',
   '',
   '<b>Команды</b>',
@@ -75,6 +78,7 @@ async function homeView(): Promise<View> {
           { text: '🗓 Календарь', callback_data: 'o:next' },
           { text: '📊 Статистика', callback_data: 'o:stats' },
         ],
+        [{ text: '📈 Метрики', callback_data: 'o:metrics' }],
       ],
     },
   }
@@ -111,6 +115,7 @@ export async function handleUpdate(update: Update) {
   // Тексты «Жалобы» и других — от постоянной клавиатуры прошлой версии бота, у кого она ещё осталась.
   if (text === '/complaints' || text.includes('Жалобы')) return present(chat, undefined, await reportsView())
   if (text === '/next' || text.includes('Ближайшие')) return present(chat, undefined, await nextView())
+  if (text === '/metrics' || text.includes('Метрики')) return present(chat, undefined, await metricsView())
   if (text === '/stats' || text.includes('Статистика')) return present(chat, undefined, await statsView())
   if (text.startsWith('/post')) return showPost(chat, text.replace('/post', '').trim())
   await present(chat, undefined, await homeView())
@@ -412,7 +417,7 @@ async function handleCallback(query: Callback) {
   }
   let answer: string | undefined
   if (kind === 'o') {
-    const view = action === 'reports' ? await reportsView() : action === 'next' ? await nextView() : action === 'stats' ? await statsView() : await homeView()
+    const view = action === 'reports' ? await reportsView() : action === 'next' ? await nextView() : action === 'stats' ? await statsView() : action === 'metrics' ? await metricsView() : await homeView()
     await present(chat, messageId, view)
   } else if (kind === 'r') answer = await handleReportAction(chat, messageId, action, Number(id))
   else if (kind === 'p') answer = await handlePostAction(chat, action, id)

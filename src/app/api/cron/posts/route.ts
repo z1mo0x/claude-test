@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import { botEnv } from '@/bot/env'
+import { recordSnapshot } from '@/bot/metrics'
 import { runDue } from '@/bot/publisher'
 
 function same(a: string, b: string) {
@@ -21,7 +22,10 @@ export async function POST(request: Request) {
   if (!same(given, cronSecret)) return new Response('forbidden: секрет в запросе не совпадает с CRON_SECRET на сайте', { status: 403 })
 
   try {
-    return Response.json({ ok: true, ...(await runDue()) })
+    const result = await runDue()
+    // Число подписчиков для «Метрик»: один раз в сутки, ошибки внутри не бросаются.
+    await recordSnapshot()
+    return Response.json({ ok: true, ...result })
   } catch (error) {
     console.error('Cron постов упал', error)
     return Response.json({ ok: false, error: error instanceof Error ? error.message : String(error) }, { status: 500 })
