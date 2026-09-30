@@ -17,6 +17,8 @@ export function botEnv() {
     startDate: e('PROMO_START_DATE'),
     /** 1 — в канал не публиковать, а присылать владельцу предпросмотр. */
     dryRun: e('BOT_DRY_RUN') === '1',
+    /** Ссылка на Vercel Analytics проекта для кнопки в «Метриках»: у Vercel нет API, посетителей смотрят в панели. */
+    analyticsUrl: e('ANALYTICS_URL'),
     site: (e('SITE_URL') || 'https://projectyard-bury.vercel.app').replace(/\/+$/, ''),
   }
 }
