@@ -11,6 +11,15 @@ export const BURY_LIMITS = [
   { limit: 10, windowMs: 24 * 60 * 60_000 },
 ]
 
+/** Сколько обращений «удалить или пожаловаться» можно с одного IP. */
+export const REPORT_LIMITS = [
+  { limit: 3, windowMs: 60 * 60_000 },
+  { limit: 10, windowMs: 24 * 60 * 60_000 },
+]
+
+export const REPORT_REASON_MAX = 500
+export const REPORT_CONTACT_MAX = 100
+
 /** Сколько проверок ссылки в минуту с одного IP. Каждая стоит запросов к GitHub. */
 export const LOOKUPS_PER_MINUTE = 30
 

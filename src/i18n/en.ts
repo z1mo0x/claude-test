@@ -151,6 +151,40 @@ export const en: Dictionary = {
     buryYours: 'Bury your own repo',
   },
 
+  report: {
+    open: 'Remove or report',
+    title: 'Remove or report',
+    close: 'Close',
+    kind: 'What happened',
+    removeOwn: 'This is my project, please remove the grave',
+    complaint: 'Report this grave',
+    reason: 'Tell us more',
+    reasonPlaceholder: 'For example: I own this repository and want the certificate removed',
+    contact: 'How to reach you (optional)',
+    contactPlaceholder: 'Telegram, email or GitHub username',
+    note: 'A person reads every request, graves are never removed automatically. To remove a grave you will need to confirm the repository is yours.',
+    submit: 'Send',
+    sending: 'Sending…',
+    done: 'Done. We got your request and will go through it by hand.',
+    errors: {
+      bad_input: 'Pick what happened and describe it in a few words',
+      not_found: 'This grave does not exist. Refresh the page',
+      too_many: 'Too many requests. Try again later',
+      bot: "Couldn't verify you are not a bot. Refresh the page and try again",
+      storage: "Couldn't send it. Try again in a little while",
+    },
+  },
+
+  badge: {
+    title: 'README badge',
+    hint: 'paste it into the repository README: the badge links to the certificate',
+    copy: 'Copy Markdown',
+    copied: 'Copied',
+    alt: 'Buried on Projectyard',
+    label: 'projectyard',
+    text: (lived) => (lived ? `lived ${lived}` : 'buried'),
+  },
+
   share: {
     button: 'Share',
     title: 'Share',

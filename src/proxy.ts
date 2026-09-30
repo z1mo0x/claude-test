@@ -21,7 +21,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Мимо proxy: служебные пути Next и Vercel, API, картинки и файлы в корне (robots.txt, sitemap.xml,
+  // Мимо proxy: служебные пути Next и Vercel, API, бейджи (/badge/…), картинки и файлы в корне (robots.txt, sitemap.xml,
   // llms.txt, og.png, icon.png). Свидетельства /r/…/certificate.png глубже корня, их proxy видит.
-  matcher: ['/((?!_next/|_vercel/|api/|images/|[^/]+\\.\\w+$).*)'],
+  matcher: ['/((?!_next/|_vercel/|api/|badge/|images/|[^/]+\\.\\w+$).*)'],
 }

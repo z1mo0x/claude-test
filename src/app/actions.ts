@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { defaultVariant, isVariant } from '@/certificate/variants'
 import { isCause } from '@/lib/causes'
+import { clean } from '@/lib/clean'
 import { clientIp, ipHash } from '@/lib/client-ip'
 import { BURY_LIMITS, EPITAPH_MAX, FAMOUS_STARS, LOOKUPS_PER_MINUTE } from '@/lib/config'
 import type { BuryError } from '@/lib/errors'
@@ -62,15 +63,6 @@ export type BuryInput = {
 }
 
 export type BuryResult = { ok: true; slug: string; href: string } | { ok: false; error: BuryError }
-
-function clean(value: unknown, max: number) {
-  if (typeof value !== 'string') return ''
-  return value
-    .replace(/\p{Cc}+/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, max)
-}
 
 export async function bury(input: BuryInput): Promise<BuryResult> {
   const parsed = parseRepoLink(String(input?.link))

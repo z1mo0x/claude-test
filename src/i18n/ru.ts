@@ -1,5 +1,5 @@
 import type { CauseId } from '@/lib/causes'
-import type { BuryError } from '@/lib/errors'
+import type { BuryError, ReportError } from '@/lib/errors'
 import { commitsLabel, formatDate, lifetime, plural } from '@/lib/format'
 import type { Network } from '@/lib/share'
 
@@ -138,6 +138,42 @@ export const ru = {
       `Свидетельство о смерти репозитория ${repo}. Причина: ${cause}. Эпитафия: ${epitaph}`,
     buryAnother: 'Похоронить ещё один',
     buryYours: 'Похоронить свой репозиторий',
+  },
+
+  /** Форма «удалить или пожаловаться» на странице свидетельства. */
+  report: {
+    open: 'Удалить или пожаловаться',
+    title: 'Удалить или пожаловаться',
+    close: 'Закрыть',
+    kind: 'Что случилось',
+    removeOwn: 'Это мой проект, уберите могилу',
+    complaint: 'Пожаловаться на эту могилу',
+    reason: 'Расскажи подробнее',
+    reasonPlaceholder: 'Например: я владелец репозитория и хочу убрать свидетельство',
+    contact: 'Как с тобой связаться (необязательно)',
+    contactPlaceholder: 'Telegram, почта или ник на GitHub',
+    note: 'Обращения читает человек, могилы сами не удаляются. Чтобы убрать могилу, нужно подтвердить, что репозиторий твой.',
+    submit: 'Отправить',
+    sending: 'Отправляю…',
+    done: 'Готово. Обращение получено, я разберу его вручную.',
+    errors: {
+      bad_input: 'Выбери, что случилось, и опиши это в нескольких словах',
+      not_found: 'Такой могилы нет. Обнови страницу',
+      too_many: 'Обращений слишком много. Попробуй позже',
+      bot: 'Не получилось проверить, что ты не бот. Обнови страницу и попробуй ещё раз',
+      storage: 'Не получилось отправить. Попробуй чуть позже',
+    } satisfies Record<ReportError, string>,
+  },
+
+  /** Бейдж для README репозитория: блок на странице свидетельства и подпись на самой плашке. */
+  badge: {
+    title: 'Бейдж для README',
+    hint: 'вставь в README репозитория: бейдж ведёт на свидетельство',
+    copy: 'Копировать Markdown',
+    copied: 'Скопировано',
+    alt: 'Похоронен на Projectyard',
+    label: 'projectyard',
+    text: (lived: string | null) => (lived ? `прожил ${lived}` : 'похоронен'),
   },
 
   share: {
