@@ -14,6 +14,29 @@ function longest(graves: GraveRow[]) {
   return graves.filter((g) => g.died_at).sort((a, b) => lived(b) - lived(a))[0]
 }
 
+/** Рекордсмен среди своих могил: больше всего коммитов. Долгий срок жизни ничего не говорит, если проект почти не трогали. */
+function mostCommits(graves: GraveRow[]) {
+  return [...graves].sort((a, b) => b.commits - a.commits)[0]
+}
+
+/** Сколько публичных репозиториев у владельца на GitHub. null, если ник не задан или GitHub не ответил: тогда {gh_repos_label} остаётся без значения. */
+async function githubRepos(login: string) {
+  if (!login) return null
+  try {
+    const response = await fetch(`https://api.github.com/users/${encodeURIComponent(login)}`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'projectyard-bot' },
+      signal: AbortSignal.timeout(5000),
+      next: { revalidate: 3600 },
+    })
+    if (!response.ok) return null
+    const count = ((await response.json()) as { public_repos?: unknown }).public_repos
+    return typeof count === 'number' ? count : null
+  } catch (error) {
+    console.error('Не удалось получить число репозиториев с GitHub', error)
+    return null
+  }
+}
+
 function about(prefix: string, g: GraveRow | undefined, site: string): Facts {
   if (!g) return {}
   return {
@@ -28,7 +51,7 @@ function about(prefix: string, g: GraveRow | undefined, site: string): Facts {
 
 export async function collectFacts(): Promise<{ facts: Facts; total: number; mine: number }> {
   const { ownerLogin, site } = botEnv()
-  const graves = await allGraves()
+  const [graves, repos] = await Promise.all([allGraves(), githubRepos(ownerLogin)])
 
   const byCause = new Map<string, number>()
   for (const g of graves) byCause.set(g.cause, (byCause.get(g.cause) ?? 0) + 1)
@@ -45,7 +68,8 @@ export async function collectFacts(): Promise<{ facts: Facts; total: number; min
     ...(mine.length
       ? { mine_projects: `${mine.length} ${plural(mine.length, ['свой пет-проект', 'своих пет-проекта', 'своих пет-проектов'])}` }
       : {}),
-    ...about('mine', longest(mine), site),
+    ...about('mine', mostCommits(mine), site),
+    ...(repos !== null ? { gh_repos_label: `${repos} ${plural(repos, ['репозиторий', 'репозитория', 'репозиториев'])}` } : {}),
   }
   return { facts, total: graves.length, mine: mine.length }
 }
