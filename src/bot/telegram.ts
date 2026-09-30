@@ -87,7 +87,21 @@ export async function editMessage(chatId: string | number, messageId: number, ht
   )
 }
 
-export const answerCallback = (id: string, text?: string) =>
+let username: string | undefined
+
+/** Ник бота для ссылок t.me/…: спрашивается у Telegram один раз на экземпляр. null, если бот не настроен или Telegram не ответил. */
+export async function botUsername() {
+  if (username) return username
+  if (!botEnv().token) return null
+  try {
+    username = (await tg<{ username?: string }>('getMe', {})).username
+  } catch (error) {
+    console.error('Не удалось узнать ник бота', error)
+  }
+  return username ?? null
+}
+
+export const answerCallback =(id: string, text?: string) =>
   tg('answerCallbackQuery', { callback_query_id: id, ...(text ? { text } : {}) })
 
 /** Личное сообщение владельцу (HTML). Не бросает: уведомление не должно ломать то, из чего его отправили. */

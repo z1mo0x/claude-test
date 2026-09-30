@@ -26,14 +26,13 @@ const set = await call('setWebhook', {
 })
 console.log('setWebhook:', set.ok ? 'готово' : set.description)
 
-// Меню команд (кнопка «/» у поля ввода) для всех чатов по умолчанию.
+// Меню команд (кнопка «/» у поля ввода) для всех чатов по умолчанию: это меню обычных людей.
+// Меню владельца бот записывает сам в его чат при /start (scope: chat), оно перекрывает это.
 const commands = await call('setMyCommands', {
   commands: [
-    { command: 'complaints', description: 'Жалобы и обращения с сайта' },
-    { command: 'next', description: 'Ближайшие посты' },
-    { command: 'stats', description: 'Статистика и состояние бота' },
-    { command: 'post', description: 'Предпросмотр поста: /post id' },
-    { command: 'testchannel', description: 'Проверить публикацию в канал' },
+    { command: 'graves', description: 'Мои могилы' },
+    { command: 'reports', description: 'Мои обращения' },
+    { command: 'github', description: 'Указать ник на GitHub' },
     { command: 'help', description: 'Помощь' },
   ],
 })
@@ -44,18 +43,19 @@ const description = await call('setMyDescription', {
   description: [
     '🪦 Projectyard — кладбище заброшенных пет-проектов',
     '',
-    'Личный помощник владельца сайта:',
-    '📋 собирает жалобы и запросы на удаление',
-    '🗓 напоминает о постах по календарю продвижения',
-    '📣 публикует готовые посты в канал',
+    'Здесь можно:',
+    '🔗 указать свой ник на GitHub и увидеть свои могилы',
+    '🗑 попросить убрать лишнюю могилу',
+    '📨 получать ответы на обращения с сайта',
     '',
-    'Нажми «Запустить», чтобы открыть меню.',
-  ].join('\n'),
+    'Нажми «Запустить».',
+  ].join('
+'),
 })
 console.log('setMyDescription:', description.ok ? 'готово' : description.description)
 
 const about = await call('setMyShortDescription', {
-  short_description: '🪦 Жалобы с кладбища, календарь постов и публикации в канал. Личный бот владельца.',
+  short_description: '🪦 Твои могилы с Projectyard и ответы на обращения. Кладбище заброшенных пет-проектов.',
 })
 console.log('setMyShortDescription:', about.ok ? 'готово' : about.description)
 

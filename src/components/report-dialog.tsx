@@ -1,14 +1,14 @@
 'use client'
 
 import { useRef, useState, type FormEvent } from 'react'
-import { Flag, X } from 'lucide-react'
+import { Flag, Send, X } from 'lucide-react'
 import { report, type ReportInput } from '@/app/report-actions'
 import { useI18n } from '@/i18n/client'
 import { REPORT_CONTACT_MAX, REPORT_REASON_MAX } from '@/lib/config'
 import { BotCheck, botCheckEnabled } from './bot-check'
 
 type Props = { owner: string; name: string }
-type Status = { state: 'idle' | 'sending' | 'done' } | { state: 'error'; message: string }
+type Status = { state: 'idle' | 'sending' } | { state: 'done'; telegram?: string } | { state: 'error'; message: string }
 
 const field =
   'w-full rounded-[10px] border border-white/14 bg-ground/80 px-4 py-3 text-[15px] text-ink placeholder:text-muted/80 focus:border-moss/60'
@@ -35,7 +35,7 @@ export function ReportDialog({ owner, name }: Props) {
     setStatus({ state: 'sending' })
     const result = await report({ owner, name, kind, reason, contact, human }).catch(() => null)
     if (result?.ok) {
-      setStatus({ state: 'done' })
+      setStatus({ state: 'done', telegram: result.telegram })
       return
     }
     setHuman('')
@@ -138,13 +138,29 @@ export function ReportDialog({ owner, name }: Props) {
           </p>
 
           {status.state === 'done' ? (
-            <button
-              type="button"
-              onClick={() => dialog.current?.close()}
-              className="flex min-h-12 items-center justify-center rounded-[10px] border border-white/14 bg-ground/60 px-6 font-bold"
-            >
-              {t.report.close}
-            </button>
+            <div className="flex flex-col gap-3">
+              {status.telegram && (
+                <>
+                  <a
+                    href={status.telegram}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="neon flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-moss px-6 font-extrabold text-[#07120a]"
+                  >
+                    <Send size={16} aria-hidden="true" />
+                    {t.report.telegram}
+                  </a>
+                  <p className="font-mono text-[12px] text-muted">&gt; {t.report.telegramHint}</p>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => dialog.current?.close()}
+                className="flex min-h-12 items-center justify-center rounded-[10px] border border-white/14 bg-ground/60 px-6 font-bold"
+              >
+                {t.report.close}
+              </button>
+            </div>
           ) : (
             <button
               type="submit"
