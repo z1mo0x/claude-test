@@ -39,6 +39,26 @@ const commands = await call('setMyCommands', {
 })
 console.log('setMyCommands:', commands.ok ? 'готово' : commands.description)
 
+// Как бот выглядит в Telegram: описание в пустом чате (до 512 символов) и «О боте» в профиле (до 120).
+const description = await call('setMyDescription', {
+  description: [
+    '🪦 Projectyard — кладбище заброшенных пет-проектов',
+    '',
+    'Личный помощник владельца сайта:',
+    '📋 собирает жалобы и запросы на удаление',
+    '🗓 напоминает о постах по календарю продвижения',
+    '📣 публикует готовые посты в канал',
+    '',
+    'Нажми «Запустить», чтобы открыть меню.',
+  ].join('\n'),
+})
+console.log('setMyDescription:', description.ok ? 'готово' : description.description)
+
+const about = await call('setMyShortDescription', {
+  short_description: '🪦 Жалобы с кладбища, календарь постов и публикации в канал. Личный бот владельца.',
+})
+console.log('setMyShortDescription:', about.ok ? 'готово' : about.description)
+
 const info = await call('getWebhookInfo', {})
 console.log('Адрес:', info.result?.url, '| ошибка:', info.result?.last_error_message ?? 'нет')
 process.exit(set.ok ? 0 : 1)

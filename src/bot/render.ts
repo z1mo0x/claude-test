@@ -10,6 +10,7 @@ export function render(template: string, facts: Facts, site: string) {
   const missing = new Set<string>()
   const text = template.replace(/\{([a-z_]+)(?::([a-z0-9_-]+))?\}/g, (whole, key: string, arg?: string) => {
     if (key === 'url') return `${site}/?utm_source=${arg}`
+    if (key === 'site') return site
     if (key in facts) return facts[key]
     missing.add(key)
     return whole

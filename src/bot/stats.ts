@@ -22,6 +22,7 @@ function about(prefix: string, g: GraveRow | undefined, site: string): Facts {
     [`${prefix}_commits`]: commitsLabel(g.commits),
     ...(g.last_words ? { [`${prefix}_words`]: g.last_words } : {}),
     [`${prefix}_cert`]: `${site}/r/${g.repo_owner}/${g.repo_name}/certificate.png`,
+    [`${prefix}_page`]: `${site}/r/${g.repo_owner}/${g.repo_name}`,
   }
 }
 

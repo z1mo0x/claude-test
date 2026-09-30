@@ -1,5 +1,6 @@
 import 'server-only'
 import { botEnv } from './env'
+import { strip } from './html'
 
 type Json = Record<string, unknown>
 
@@ -23,71 +24,78 @@ export async function tg<T = unknown>(method: string, body: Json): Promise<T> {
   return result.result as T
 }
 
-const LIMIT = 4000
-
-/** Режет длинный текст по абзацам: в одном сообщении Telegram принимает до 4096 символов. */
-export function splitText(text: string) {
-  const parts: string[] = []
-  let current = ''
-  for (const paragraph of text.split('\n\n')) {
-    if (current && current.length + paragraph.length + 2 > LIMIT) {
-      parts.push(current)
-      current = ''
-    }
-    current = current ? `${current}\n\n${paragraph}` : paragraph
-    while (current.length > LIMIT) {
-      parts.push(current.slice(0, LIMIT))
-      current = current.slice(LIMIT)
-    }
+/**
+ * Отправка с разметкой HTML. Если Telegram не смог разобрать теги, то же сообщение уходит
+ * простым текстом: лучше некрасивое сообщение, чем никакого.
+ */
+async function withHtml<T>(send: (fields: Json) => Promise<T>, field: 'text' | 'caption', html: string) {
+  try {
+    return await send({ [field]: html, parse_mode: 'HTML' })
+  } catch (error) {
+    if (!/can't parse entities|unsupported start tag|unexpected end tag/i.test(String(error))) throw error
+    console.error('Telegram не разобрал HTML, отправляю простым текстом', error)
+    return send({ [field]: strip(html) })
   }
-  if (current) parts.push(current)
-  return parts
 }
 
-export async function sendMessage(chatId: string | number, text: string, markup?: Markup) {
-  const parts = splitText(text)
+/** Одно сообщение. Текст в HTML: всё чужое в нём должно быть пропущено через esc. */
+export async function sendMessage(chatId: string | number, html: string, markup?: Markup) {
+  return withHtml(
+    (fields) =>
+      tg<{ message_id: number }>('sendMessage', {
+        chat_id: chatId,
+        link_preview_options: { is_disabled: true },
+        ...fields,
+        ...(markup ? { reply_markup: markup } : {}),
+      }),
+    'text',
+    html,
+  )
+}
+
+/** Несколько сообщений подряд, кнопки только под последним. */
+export async function sendMessages(chatId: string | number, messages: string[], markup?: Markup) {
   let last: { message_id: number } | undefined
-  for (const [index, part] of parts.entries()) {
-    last = await tg<{ message_id: number }>('sendMessage', {
-      chat_id: chatId,
-      text: part,
-      link_preview_options: { is_disabled: true },
-      // Кнопки только под последней частью.
-      ...(markup && index === parts.length - 1 ? { reply_markup: markup } : {}),
-    })
+  for (const [index, html] of messages.entries()) {
+    last = await sendMessage(chatId, html, index === messages.length - 1 ? markup : undefined)
   }
   return last
 }
 
 /** Подпись к фото не длиннее 1024 символов: длинный текст уходит следующим сообщением. */
-export async function sendPhoto(chatId: string | number, photo: string, caption: string) {
-  if (caption.length <= 1000) {
-    return tg<{ message_id: number }>('sendPhoto', { chat_id: chatId, photo, caption })
+export async function sendPhoto(chatId: string | number, photo: string, captionHtml: string) {
+  if (captionHtml.length <= 1000) {
+    return withHtml((fields) => tg<{ message_id: number }>('sendPhoto', { chat_id: chatId, photo, ...fields }), 'caption', captionHtml)
   }
   const message = await tg<{ message_id: number }>('sendPhoto', { chat_id: chatId, photo })
-  await sendMessage(chatId, caption)
+  await sendMessage(chatId, captionHtml)
   return message
 }
 
-export async function editMessage(chatId: string | number, messageId: number, text: string, markup?: Markup) {
-  await tg('editMessageText', {
-    chat_id: chatId,
-    message_id: messageId,
-    text,
-    link_preview_options: { is_disabled: true },
-    ...(markup ? { reply_markup: markup } : {}),
-  })
+export async function editMessage(chatId: string | number, messageId: number, html: string, markup?: Markup) {
+  await withHtml(
+    (fields) =>
+      tg('editMessageText', {
+        chat_id: chatId,
+        message_id: messageId,
+        link_preview_options: { is_disabled: true },
+        ...fields,
+        ...(markup ? { reply_markup: markup } : {}),
+      }),
+    'text',
+    html,
+  )
 }
 
 export const answerCallback = (id: string, text?: string) =>
   tg('answerCallbackQuery', { callback_query_id: id, ...(text ? { text } : {}) })
 
-/** Личное сообщение владельцу. Не бросает: уведомление не должно ломать то, из чего его отправили. */
-export async function notifyOwner(text: string, markup?: Markup) {
+/** Личное сообщение владельцу (HTML). Не бросает: уведомление не должно ломать то, из чего его отправили. */
+export async function notifyOwner(html: string, markup?: Markup) {
   const { token, ownerId } = botEnv()
   if (!token || !ownerId) return
   try {
-    await sendMessage(ownerId, text, markup)
+    await sendMessage(ownerId, html, markup)
   } catch (error) {
     console.error('Не удалось написать владельцу в Telegram', error)
   }

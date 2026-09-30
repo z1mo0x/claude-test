@@ -1,14 +1,17 @@
 import 'server-only'
 import { claimPost, markPost, postStatuses } from './db'
 import { botEnv } from './env'
+import { esc, i, pack, postBlocks, postToHtml } from './html'
 import { render } from './render'
 import { POSTS, type Post } from './schedule'
 import { collectFacts, type Facts } from './stats'
-import { notifyOwner, sendMessage, sendPhoto } from './telegram'
+import { notifyOwner, sendMessage, sendMessages, sendPhoto, type InlineButton } from './telegram'
 
 /** Пост, время которого прошло больше чем полдня назад, сам не уходит: пусть решает владелец. */
 const WINDOW_MS = 12 * 60 * 60_000
 const MSK_OFFSET_HOURS = 3
+const DAY_MS = 86_400_000
+const WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']
 
 /** Когда пост должен уйти, в миллисекундах UTC. Москва — UTC+3 без перехода на летнее время. */
 export function dueAt(post: Post, startDate: string) {
@@ -17,14 +20,52 @@ export function dueAt(post: Post, startDate: string) {
   return Date.UTC(year, month - 1, day + post.day, hours - MSK_OFFSET_HOURS, minutes)
 }
 
+const pad = (n: number) => String(n).padStart(2, '0')
+
+function mskDate(ms: number) {
+  return new Date(ms + MSK_OFFSET_HOURS * 3_600_000)
+}
+
 /** «03.10 19:00» по Москве. */
 export function moscow(ms: number) {
-  const d = new Date(ms + MSK_OFFSET_HOURS * 3_600_000)
-  const pad = (n: number) => String(n).padStart(2, '0')
+  const d = mskDate(ms)
   return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
 }
 
-export type Outcome = { ok: true; note: string } | { ok: false; reason: string }
+/** «19:00» по Москве. */
+export const moscowTime = (ms: number) => moscow(ms).slice(6)
+
+/** Ключ дня по Москве, YYYY-MM-DD: по нему посты группируются по дням. */
+export function dayKey(ms: number) {
+  const d = mskDate(ms)
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
+}
+
+/** «Сегодня · 30.09», «Завтра · 01.10», «Вчера · 29.09», иначе «пт · 03.10». */
+export function dayLabel(ms: number, now = Date.now()) {
+  const d = mskDate(ms)
+  const short = `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}`
+  const diff = Math.round((Date.parse(dayKey(ms)) - Date.parse(dayKey(now))) / DAY_MS)
+  const name = diff === 0 ? 'Сегодня' : diff === 1 ? 'Завтра' : diff === -1 ? 'Вчера' : WEEKDAYS[d.getUTCDay()]
+  return `${name} · ${short}`
+}
+
+/** Номер дня календаря: день 0 — PROMO_START_DATE. */
+export function calendarDay(startDate: string, now = Date.now()) {
+  return Math.round((Date.parse(dayKey(now)) - Date.parse(startDate)) / DAY_MS)
+}
+
+/** Ссылка на сообщение в канале: по @username или по числовому id вида -100… */
+function channelLink(channel: string, messageId: number | undefined) {
+  if (!messageId) return undefined
+  if (channel.startsWith('@')) return `https://t.me/${channel.slice(1)}/${messageId}`
+  if (channel.startsWith('-100')) return `https://t.me/c/${channel.slice(4)}/${messageId}`
+  return undefined
+}
+
+export type Outcome = { ok: true; note: string; link?: string } | { ok: false; reason: string }
+
+const missingLine = (keys: string[]) => `⚠️ <b>Не хватает данных</b> для подстановок: ${keys.map((key) => `<code>{${esc(key)}}</code>`).join(', ')}`
 
 /** Отправляет один пост: в канал или владельцу напоминанием. Ни о чём не спрашивает, решает вызывающий. */
 export async function deliver(post: Post, facts: Facts): Promise<Outcome> {
@@ -39,16 +80,21 @@ export async function deliver(post: Post, facts: Facts): Promise<Outcome> {
     }
     if (env.dryRun || !env.channel) {
       const why = env.dryRun ? 'включён BOT_DRY_RUN' : 'не задан TELEGRAM_CHANNEL_ID'
-      await sendMessage(env.ownerId, `👀 Предпросмотр «${post.title}». В канал не отправлено: ${why}.\n\n${body.text}`)
+      await sendMessages(
+        env.ownerId,
+        pack(`👀 <b>Предпросмотр:</b> ${esc(post.title)}\n<i>В канал не отправлено: ${esc(why)}.</i>`, [`<blockquote>${postToHtml(body.text)}</blockquote>`]),
+      )
       return { ok: true, note: `предпросмотр (${why})` }
     }
-    const message = photo ? await sendPhoto(env.channel, photo.text, body.text) : await sendMessage(env.channel, body.text)
-    return { ok: true, note: `канал, сообщение ${message?.message_id ?? '?'}` }
+    const html = postToHtml(body.text)
+    const message = photo ? await sendPhoto(env.channel, photo.text, html) : await sendMessage(env.channel, html)
+    return { ok: true, note: `канал, сообщение ${message?.message_id ?? '?'}`, link: channelLink(env.channel, message?.message_id) }
   }
 
-  const header = `🗓 Пора: ${post.title}${post.todo ? `\n${post.todo}` : ''}`
-  const warning = missing.length ? `\n\n⚠️ Не хватает данных для подстановок: ${missing.map((key) => `{${key}}`).join(', ')}` : ''
-  await sendMessage(env.ownerId, `${header}${warning}\n\n${body.text}`)
+  const head = [`🔔 <b>Пора: ${esc(post.title)}</b>`, post.todo ? `<i>${esc(post.todo)}</i>` : '', missing.length ? missingLine(missing) : '']
+    .filter(Boolean)
+    .join('\n')
+  await sendMessages(env.ownerId, pack(head, postBlocks(body.text, post.plain)))
   return { ok: true, note: 'напоминание владельцу' }
 }
 
@@ -75,18 +121,27 @@ export async function runDue(now = Date.now()) {
         await markPost(post.id, 'sent', outcome.note)
         sent.push(post.id)
         if (post.mode === 'channel' && !outcome.note.startsWith('предпросмотр')) {
-          await notifyOwner(`✅ Опубликовано в канале: ${post.title}`)
+          await notifyOwner(`✅ <b>Опубликовано в канале</b>\n${esc(post.title)}`, outcome.link ? linkButton(outcome.link) : undefined)
         }
       } else {
         await markPost(post.id, 'failed', outcome.reason)
-        await notifyOwner(`⚠️ «${post.title}» не опубликован: ${outcome.reason}.\nПосле исправления: /post ${post.id}`)
+        await notifyOwner(
+          `⚠️ <b>Не опубликован:</b> ${esc(post.title)}\n${esc(outcome.reason)}\n\n${i('После исправления: ')}<code>/post ${esc(post.id)}</code>`,
+        )
       }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       console.error(`Пост ${post.id} не отправлен`, error)
       await markPost(post.id, 'failed', reason).catch(() => {})
-      await notifyOwner(`⚠️ «${post.title}» не отправлен: ${reason}.\nПовтори: /post ${post.id}`)
+      await notifyOwner(`⚠️ <b>Не отправлен:</b> ${esc(post.title)}\n${esc(reason)}\n\nПовтори: <code>/post ${esc(post.id)}</code>`)
     }
   }
   return { sent }
 }
+
+/** Кнопка со ссылкой под сообщением. */
+export function linkButton(url: string, text = '🔗 Открыть пост') {
+  const button: InlineButton = { text, url }
+  return { inline_keyboard: [[button]] }
+}
+
