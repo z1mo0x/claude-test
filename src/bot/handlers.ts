@@ -18,8 +18,9 @@ import { calendarDay, dayLabel, deliver, dueAt, linkButton, moscow, moscowTime }
 import { render } from './render'
 import { POSTS } from './schedule'
 import { collectFacts } from './stats'
-import { answerCallback, editMessage, notifyOwner, sendMessage, sendMessages, tg, type InlineButton, type Markup } from './telegram'
+import { answerCallback, notifyOwner, sendMessage, sendMessages, tg, type InlineButton, type Markup } from './telegram'
 import { handleUserCallback, handleUserMessage, tellReporter, verdictText } from './user'
+import { back, clearKeyboard, present, type View } from './view'
 
 type Message = {
   message_id: number
@@ -30,17 +31,6 @@ type Message = {
 }
 type Callback = { id: string; from: { id: number; username?: string }; data?: string; message?: Message }
 export type Update = { message?: Message; callback_query?: Callback }
-
-const BTN_REPORTS = '📋 Жалобы'
-const BTN_NEXT = '🗓 Ближайшие посты'
-const BTN_STATS = '📊 Статистика'
-
-/** Постоянная клавиатура внизу чата. Видит её только владелец: бот отвечает только ему. */
-const MENU: Markup = {
-  keyboard: [[{ text: BTN_REPORTS }, { text: BTN_NEXT }], [{ text: BTN_STATS }]],
-  resize_keyboard: true,
-  is_persistent: true,
-}
 
 /** Меню команд рядом с полем ввода (кнопка «/»). Только в личном чате владельца. */
 const COMMANDS = [
@@ -65,13 +55,32 @@ const HELP = [
   'Слежу за сайтом и помогаю его продвигать.',
   '',
   '📋 <b>Жалобы</b> — обращения «удалить или пожаловаться»',
-  '🗓 <b>Ближайшие посты</b> — календарь продвижения',
+  '🗓 <b>Календарь</b> — ближайшие посты',
   '📊 <b>Статистика</b> — счётчик и состояние бота',
   '',
   '<b>Команды</b>',
   '/post <code>id</code> — предпросмотр поста и кнопки',
   '/testchannel — пробное сообщение в канал',
 ].join('\n')
+
+/** Главный экран владельца: остальные разделы открываются на этом же сообщении, назад ведёт сюда. */
+async function homeView(): Promise<View> {
+  const count = await countNewReports().catch(() => 0)
+  return {
+    html: HELP,
+    markup: {
+      inline_keyboard: [
+        [{ text: count ? `📋 Жалобы · ${count}` : '📋 Жалобы', callback_data: 'o:reports' }],
+        [
+          { text: '🗓 Календарь', callback_data: 'o:next' },
+          { text: '📊 Статистика', callback_data: 'o:stats' },
+        ],
+      ],
+    },
+  }
+}
+
+const HOME = 'o:home'
 
 const isOwner = (id: number | undefined) => Boolean(id) && String(id) === botEnv().ownerId
 
@@ -93,16 +102,18 @@ export async function handleUpdate(update: Update) {
 
   if (text === '/start' || text === '/help') {
     await registerMenu(chat)
-    return void (await sendMessage(chat, HELP, MENU))
+    await clearKeyboard(chat)
+    return present(chat, undefined, await homeView())
   }
   const replyTo = message.reply_to_message?.text
   if (replyTo && !text.startsWith('/')) return replyToReporter(chat, replyTo, text)
   if (text === '/testchannel') return testChannel(chat)
-  if (text === '/complaints' || text.includes('Жалобы')) return showReports(chat)
-  if (text === '/next' || text.includes('Ближайшие')) return showNext(chat)
-  if (text === '/stats' || text.includes('Статистика')) return showStats(chat)
+  // Тексты «Жалобы» и других — от постоянной клавиатуры прошлой версии бота, у кого она ещё осталась.
+  if (text === '/complaints' || text.includes('Жалобы')) return present(chat, undefined, await reportsView())
+  if (text === '/next' || text.includes('Ближайшие')) return present(chat, undefined, await nextView())
+  if (text === '/stats' || text.includes('Статистика')) return present(chat, undefined, await statsView())
   if (text.startsWith('/post')) return showPost(chat, text.replace('/post', '').trim())
-  await sendMessage(chat, HELP, MENU)
+  await present(chat, undefined, await homeView())
 }
 
 // ── Жалобы ──────────────────────────────────────────────────────────────────
@@ -125,14 +136,14 @@ function reportText(r: ReportRow) {
 /** Обычный ответ (reply) владельца на карточку обращения уходит человеку в его чат. */
 async function replyToReporter(chat: number, card: string, text: string) {
   const id = /(?:Запрос на удаление|Жалоба)\s+#(\d+)/.exec(card)?.[1]
-  if (!id) return void (await sendMessage(chat, i('Чтобы ответить человеку, ответь (reply) на карточку обращения.'), MENU))
+  if (!id) return void (await sendMessage(chat, i('Чтобы ответить человеку, ответь (reply) на карточку обращения.')))
   const report = await reportById(Number(id))
-  if (!report) return void (await sendMessage(chat, `⚠️ Обращения #${esc(id)} нет.`, MENU))
+  if (!report) return void (await sendMessage(chat, `⚠️ Обращения #${esc(id)} нет.`))
   if (!report.tg_chat_id) {
-    return void (await sendMessage(chat, `⚠️ По #${report.id} человек не привязал Telegram, ответить некому. Контакт: ${report.contact ? esc(report.contact) : 'не указан'}.`, MENU))
+    return void (await sendMessage(chat, `⚠️ По #${report.id} человек не привязал Telegram, ответить некому. Контакт: ${report.contact ? esc(report.contact) : 'не указан'}.`))
   }
   const sent = await tellReporter(report, verdictText.reply(report, text))
-  await sendMessage(chat, sent ? `✉️ Отправил ответ по #${report.id}.` : `⚠️ Не вышло: человек закрыл бота или чат недоступен.`, MENU)
+  await sendMessage(chat, sent ? `✉️ Отправил ответ по #${report.id}.` : `⚠️ Не вышло: человек закрыл бота или чат недоступен.`)
 }
 
 /** Сообщает человеку итог, если он привязал Telegram, и возвращает строку для карточки владельца. */
@@ -150,6 +161,7 @@ function reportButtons(r: ReportRow): Markup {
         { text: '🚫 Отклонить', callback_data: `r:rej:${r.id}` },
       ],
       [{ text: '🗑 Удалить могилу', callback_data: `r:del:${r.id}` }],
+      back('o:reports', '← К списку'),
     ],
   }
 }
@@ -166,35 +178,41 @@ export async function announceReport(id: number) {
   }
 }
 
-async function showReports(chat: number) {
-  const [reports, total] = await Promise.all([newReports(5), countNewReports()])
+/** Список новых обращений одним сообщением: нажатие на строку открывает карточку на этом же месте. */
+async function reportsView(): Promise<View> {
+  const [reports, total] = await Promise.all([newReports(8), countNewReports()])
   if (!reports.length) {
-    return void (await sendMessage(
-      chat,
-      '✨ <b>Новых обращений нет</b>\n<i>Когда кто-то заполнит форму на сайте, пришлю карточку сразу.</i>',
-      MENU,
-    ))
+    return {
+      html: '✨ <b>Новых обращений нет</b>\n<i>Когда кто-то заполнит форму на сайте, пришлю карточку сразу.</i>',
+      markup: { inline_keyboard: [back(HOME)] },
+    }
   }
   const more = total > reports.length ? ` · показываю ${reports.length} самых старых` : ''
-  await sendMessage(chat, `📋 <b>Обращения</b> · новых: <b>${total}</b>${more}`, MENU)
-  for (const report of reports) await sendMessage(chat, reportText(report), reportButtons(report))
+  const rows = reports.map((r): InlineButton[] => [{ text: `${r.kind === 'complaint' ? '🚩' : '🗑'} #${r.id} · ${r.slug}`.slice(0, 48), callback_data: `r:view:${r.id}` }])
+  return { html: `📋 <b>Обращения</b> · новых: <b>${total}</b>${more}\n<i>Нажми на обращение, чтобы открыть.</i>`, markup: { inline_keyboard: [...rows, back(HOME)] } }
 }
+
+/** Что показать после решения по обращению: итог и кнопка возврата к списку. */
+const toList: Markup = { inline_keyboard: [back('o:reports', '← К списку')] }
 
 async function handleReportAction(chat: number, messageId: number, action: string, id: number): Promise<string | undefined> {
   const report = await reportById(id)
   if (!report) return 'Обращение не найдено'
   if (report.status !== 'new') return 'Уже обработано'
 
-  if (action === 'back') {
-    await editMessage(chat, messageId, reportText(report), reportButtons(report))
+  if (action === 'view' || action === 'back') {
+    await present(chat, messageId, { html: reportText(report), markup: reportButtons(report) })
     return undefined
   }
   if (action === 'del') {
-    await editMessage(chat, messageId, `${reportText(report)}\n\n⚠️ <b>Удалить могилу ${esc(report.slug)} навсегда?</b>\nОтменить это нельзя.`, {
-      inline_keyboard: [
-        [{ text: '🗑 Да, удалить навсегда', callback_data: `r:delok:${id}` }],
-        [{ text: '← Отмена', callback_data: `r:back:${id}` }],
-      ],
+    await present(chat, messageId, {
+      html: `${reportText(report)}\n\n⚠️ <b>Удалить могилу ${esc(report.slug)} навсегда?</b>\nОтменить это нельзя.`,
+      markup: {
+        inline_keyboard: [
+          [{ text: '🗑 Да, удалить навсегда', callback_data: `r:delok:${id}` }],
+          [{ text: '← Отмена', callback_data: `r:back:${id}` }],
+        ],
+      },
     })
     return undefined
   }
@@ -203,13 +221,19 @@ async function handleReportAction(chat: number, messageId: number, action: strin
     await setReportStatus(id, 'done')
     revalidateSite()
     const told = await notifyVerdict(report, verdictText.removed(report))
-    await editMessage(chat, messageId, `${reportText(report)}\n\n🗑 <b>${removed ? 'Могила удалена' : 'Могилы уже не было'}.</b> Обращение закрыто.${told}`)
+    await present(chat, messageId, {
+      html: `${reportText(report)}\n\n🗑 <b>${removed ? 'Могила удалена' : 'Могилы уже не было'}.</b> Обращение закрыто.${told}`,
+      markup: toList,
+    })
     return undefined
   }
   if (action === 'done' || action === 'rej') {
     await setReportStatus(id, action === 'done' ? 'done' : 'rejected')
     const told = await notifyVerdict(report, action === 'done' ? verdictText.done(report) : verdictText.rejected(report))
-    await editMessage(chat, messageId, `${reportText(report)}\n\n${action === 'done' ? '✅ <b>Готово</b>' : '🚫 <b>Отклонено</b>'}${told}`)
+    await present(chat, messageId, {
+      html: `${reportText(report)}\n\n${action === 'done' ? '✅ <b>Готово</b>' : '🚫 <b>Отклонено</b>'}${told}`,
+      markup: toList,
+    })
   }
   return undefined
 }
@@ -227,14 +251,14 @@ function revalidateSite() {
 
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
 
-async function showNext(chat: number) {
+async function nextView(): Promise<View> {
   const env = botEnv()
+  const home: Markup = { inline_keyboard: [back(HOME)] }
   if (!validDate(env.startDate)) {
-    return void (await sendMessage(
-      chat,
-      '🗓 <b>Календарь не запущен</b>\nЗадай <code>PROMO_START_DATE</code> (ГГГГ-ММ-ДД, день 0) в Vercel и сделай Redeploy.',
-      MENU,
-    ))
+    return {
+      html: '🗓 <b>Календарь не запущен</b>\nЗадай <code>PROMO_START_DATE</code> (ГГГГ-ММ-ДД, день 0) в Vercel и сделай Redeploy.',
+      markup: home,
+    }
   }
   const statuses = await postStatuses()
   const now = Date.now()
@@ -243,9 +267,7 @@ async function showNext(chat: number) {
     .filter(({ at, status }) => status?.status === 'failed' || (!status && at > now - 36 * 3_600_000))
     .slice(0, 12)
 
-  if (!items.length) {
-    return void (await sendMessage(chat, '🎉 <b>Всё отправлено</b>\nВ календаре больше ничего нет.', MENU))
-  }
+  if (!items.length) return { html: '🎉 <b>Всё отправлено</b>\nВ календаре больше ничего нет.', markup: home }
 
   const start = env.startDate.split('-').reverse().slice(0, 2).join('.')
   const lines: string[] = ['🗓 <b>Календарь продвижения</b>', i(`день 0 = ${start} · сейчас день ${calendarDay(env.startDate)}`)]
@@ -265,7 +287,7 @@ async function showNext(chat: number) {
   const buttons: InlineButton[][] = items
     .slice(0, 5)
     .map(({ post, at }) => [{ text: `👁 ${moscowTime(at)} · ${post.title}`.slice(0, 48), callback_data: `p:view:${post.id}` }])
-  await sendMessage(chat, lines.join('\n'), { inline_keyboard: buttons })
+  return { html: lines.join('\n'), markup: { inline_keyboard: [...buttons, back(HOME)] } }
 }
 
 async function showPost(chat: number, id: string) {
@@ -294,7 +316,9 @@ async function showPost(chat: number, id: string) {
     post.mode === 'channel'
       ? { text: '📣 Опубликовать в канал сейчас', callback_data: `p:pub:${id}` }
       : { text: '✅ Отметить сделанным', callback_data: `p:done:${id}` }
-  await sendMessages(chat, pack(head, blocks), { inline_keyboard: [[action], [{ text: '↩️ Сбросить статус', callback_data: `p:reset:${id}` }]] })
+  await sendMessages(chat, pack(head, blocks), {
+    inline_keyboard: [[action], [{ text: '↩️ Сбросить статус', callback_data: `p:reset:${id}` }], back('o:next', '← К календарю')],
+  })
 }
 
 async function handlePostAction(chat: number, action: string, id: string): Promise<string | undefined> {
@@ -351,7 +375,7 @@ async function testChannel(chat: number) {
 
 // ── Статистика ─────────────────────────────────────────────────────────────
 
-async function showStats(chat: number) {
+async function statsView(): Promise<View> {
   const env = botEnv()
   const [{ facts, total, mine }, reports] = await Promise.all([collectFacts(), countNewReports()])
   const calendar = validDate(env.startDate) ? `день ${calendarDay(env.startDate)} · старт ${env.startDate.split('-').reverse().join('.')}` : 'не запущен'
@@ -371,7 +395,7 @@ async function showStats(chat: number) {
     `🗓 Календарь: ${esc(calendar)}`,
     env.dryRun ? '🟡 Режим: <b>пробный</b>, в канал не публикую' : '🟢 Режим: <b>боевой</b>',
   ]
-  await sendMessage(chat, lines.filter((line) => line !== null).join('\n'), MENU)
+  return { html: lines.filter((line) => line !== null).join('\n'), markup: { inline_keyboard: [back(HOME)] } }
 }
 
 // ── Кнопки под сообщениями ─────────────────────────────────────────────────
@@ -380,16 +404,17 @@ async function handleCallback(query: Callback) {
   if (!query.message) return void (await answerCallback(query.id))
   const chat = query.message.chat.id
   const [kind, action, id] = (query.data ?? '').split(':')
-  if (!isOwner(query.from.id)) {
-    // Обычным людям доступны только их кнопки (u:…), всё владельческое молча игнорируется.
+  const messageId = query.message.message_id
+  // Кнопки u:… — экраны обычного человека, они доступны всем. Всё остальное у чужих молча игнорируется.
+  if (kind === 'u' || !isOwner(query.from.id)) {
     if (kind !== 'u') return void (await answerCallback(query.id))
-    return handleUserCallback(
-      { id: query.id, chat, messageId: query.message.message_id, data: query.data ?? '', username: query.from.username },
-      announceReport,
-    )
+    return handleUserCallback({ id: query.id, chat, messageId, data: query.data ?? '', username: query.from.username }, announceReport)
   }
   let answer: string | undefined
-  if (kind === 'r') answer = await handleReportAction(chat, query.message.message_id, action, Number(id))
+  if (kind === 'o') {
+    const view = action === 'reports' ? await reportsView() : action === 'next' ? await nextView() : action === 'stats' ? await statsView() : await homeView()
+    await present(chat, messageId, view)
+  } else if (kind === 'r') answer = await handleReportAction(chat, messageId, action, Number(id))
   else if (kind === 'p') answer = await handlePostAction(chat, action, id)
   await answerCallback(query.id, answer || undefined)
 }

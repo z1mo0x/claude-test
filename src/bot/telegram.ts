@@ -8,6 +8,7 @@ export type InlineButton = { text: string; callback_data?: string; url?: string 
 export type Markup =
   | { inline_keyboard: InlineButton[][] }
   | { keyboard: { text: string }[][]; resize_keyboard: true; is_persistent: true }
+  | { remove_keyboard: true }
 
 /** Вызов метода Telegram Bot API. Ошибку бросает с описанием от Telegram. TELEGRAM_API_URL нужен только для тестов с подменой Telegram. */
 export async function tg<T = unknown>(method: string, body: Json): Promise<T> {
