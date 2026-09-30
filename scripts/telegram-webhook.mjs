@@ -30,9 +30,7 @@ console.log('setWebhook:', set.ok ? 'готово' : set.description)
 // Меню владельца бот записывает сам в его чат при /start (scope: chat), оно перекрывает это.
 const commands = await call('setMyCommands', {
   commands: [
-    { command: 'graves', description: 'Мои могилы' },
     { command: 'reports', description: 'Мои обращения' },
-    { command: 'github', description: 'Указать ник на GitHub' },
     { command: 'help', description: 'Помощь' },
   ],
 })
@@ -43,18 +41,15 @@ const description = await call('setMyDescription', {
   description: [
     '🪦 Projectyard — кладбище заброшенных пет-проектов',
     '',
-    'Здесь можно:',
-    '🔗 указать свой ник на GitHub и увидеть свои могилы',
-    '🗑 попросить убрать лишнюю могилу',
-    '📨 получать ответы на обращения с сайта',
+    '📨 Сюда приходят ответы на обращения с сайта: отправь форму «Удалить или пожаловаться» и нажми «Получить ответ в Telegram».',
     '',
-    'Нажми «Запустить».',
+    '🔜 Проверка своих могил и привязка GitHub появятся после запуска основного сайта.',
   ].join('\n'),
 })
 console.log('setMyDescription:', description.ok ? 'готово' : description.description)
 
 const about = await call('setMyShortDescription', {
-  short_description: '🪦 Твои могилы с Projectyard и ответы на обращения. Кладбище заброшенных пет-проектов.',
+  short_description: '🪦 Ответы на обращения с сайта Projectyard. Кладбище заброшенных пет-проектов.',
 })
 console.log('setMyShortDescription:', about.ok ? 'готово' : about.description)
 

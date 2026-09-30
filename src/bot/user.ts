@@ -22,6 +22,13 @@ import { back, clearKeyboard, present, type View } from './view'
 export type UserMessage = { chat: number; text: string }
 export type UserCallback = { id: string; chat: number; messageId: number; data: string; username?: string }
 
+/**
+ * «Мои могилы», привязка ника GitHub и запрос на удаление из бота выключены до запуска основного сайта:
+ * пока обычным людям бот нужен только для ответов по обращениям с формы (ссылка t.me/бот?start=r_код).
+ * Чтобы включить, поставить true и вернуть команды в scripts/telegram-webhook.mjs. Код ниже рабочий.
+ */
+const GITHUB_FEATURES = false as boolean
+
 // Тексты постоянной клавиатуры прошлой версии бота: у кого она осталась, нажатия ещё понимаем.
 const OLD_GRAVES = '🪦 Мои могилы'
 const OLD_REPORTS = '📨 Мои обращения'
@@ -29,9 +36,7 @@ const OLD_LOGIN = '🔗 Сменить GitHub'
 
 /** Меню команд для всех, кроме владельца (у него своё, в его чате). */
 export const USER_COMMANDS = [
-  { command: 'graves', description: 'Мои могилы' },
   { command: 'reports', description: 'Мои обращения' },
-  { command: 'github', description: 'Указать ник на GitHub' },
   { command: 'help', description: 'Помощь' },
 ]
 
@@ -69,6 +74,21 @@ const toReports: Markup = { inline_keyboard: [[{ text: '📨 Мои обраще
 // ── Экраны ──────────────────────────────────────────────────────────────────
 
 async function homeView(chat: number): Promise<View> {
+  if (!GITHUB_FEATURES) {
+    return {
+      html: [
+        '🪦 <b>Projectyard</b>',
+        '<i>Кладбище заброшенных пет-проектов</i>',
+        '',
+        '📨 Здесь приходят ответы на обращения с сайта. Отправь форму «Удалить или пожаловаться» и нажми «Получить ответ в Telegram»: я напишу, когда рассмотрю.',
+        '',
+        '🔜 Проверка своих могил и привязка GitHub появятся после запуска основного сайта.',
+        '',
+        i(`Сайт: ${botEnv().site}`),
+      ].join('\n'),
+      markup: { inline_keyboard: [[{ text: '📨 Мои обращения', callback_data: 'u:reports' }]] },
+    }
+  }
   const login = await linkedLogin(chat)
   const lines = [
     '🪦 <b>Projectyard</b>',
@@ -137,7 +157,7 @@ async function reportsView(chat: number): Promise<View> {
   const reports = await reportsOfChat(chat)
   if (!reports.length) {
     return {
-      html: '📨 <b>Обращений пока нет</b>\n<i>Убрать могилу можно кнопкой в «Мои могилы». Обращение с сайта попадёт сюда, если после отправки нажать «Получить ответ в Telegram».</i>',
+      html: `📨 <b>Обращений пока нет</b>\n<i>Обращение с сайта попадёт сюда, если после отправки формы нажать «Получить ответ в Telegram».${GITHUB_FEATURES ? ' Убрать могилу можно и кнопкой в «Мои могилы».' : ''}</i>`,
       markup: { inline_keyboard: [back(HOME)] },
     }
   }
@@ -155,8 +175,10 @@ export async function handleUserMessage({ chat, text }: UserMessage) {
     await clearKeyboard(chat)
     return present(chat, undefined, await homeView(chat))
   }
-  if (text === '/graves' || text === OLD_GRAVES) return present(chat, undefined, await gravesView(chat))
   if (text === '/reports' || text === OLD_REPORTS) return present(chat, undefined, await reportsView(chat))
+  // Пока функции с GitHub выключены, всё остальное ведёт на главный экран.
+  if (!GITHUB_FEATURES) return present(chat, undefined, await homeView(chat))
+  if (text === '/graves' || text === OLD_GRAVES) return present(chat, undefined, await gravesView(chat))
   if (text === '/unlink') {
     await unlinkLogin(chat)
     return present(chat, undefined, {
@@ -210,7 +232,7 @@ export async function handleUserCallback(query: UserCallback, announce: (id: num
   const id = Number(raw)
   let answer: string | undefined
 
-  if (action === 'home') await show(await homeView(chat))
+  if (action === 'home' || (!GITHUB_FEATURES && action !== 'reports')) await show(await homeView(chat))
   else if (action === 'graves') await show(await gravesView(chat))
   else if (action === 'reports') await show(await reportsView(chat))
   else if (action === 'login') await show(loginView())
