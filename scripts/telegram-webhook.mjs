@@ -49,8 +49,7 @@ const description = await call('setMyDescription', {
     '📨 получать ответы на обращения с сайта',
     '',
     'Нажми «Запустить».',
-  ].join('
-'),
+  ].join('\n'),
 })
 console.log('setMyDescription:', description.ok ? 'готово' : description.description)
 
