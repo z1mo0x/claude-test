@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, type Ref } from 'react'
+import { useState, type CSSProperties, type Ref } from 'react'
 import { Check, Copy, Download, ImageIcon, Link2, X } from 'lucide-react'
 import { useI18n } from '@/i18n/client'
 import type { Network } from '@/lib/share'
+import { BlueskyIcon, LinkedinIcon, RedditIcon, TelegramIcon, ThreadsIcon, VkIcon, XIcon } from './brand-icons'
 
 export const secondary =
   'flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/14 bg-ground/60 px-4 text-[14px] font-semibold transition-colors hover:border-white/30'
@@ -24,15 +25,19 @@ type Copied = 'link' | 'text' | 'image' | 'image-failed' | null
 type Post = { url: string; text: string; title: string }
 const e = encodeURIComponent
 
-/** Ссылки для публикации у самих соцсетей. Какие показывать и в каком порядке — в словаре языка. */
-const networks: Record<Network, { name: string; href: (post: Post) => string }> = {
-  telegram: { name: 'Telegram', href: ({ url, text }) => `https://t.me/share/url?url=${e(url)}&text=${e(text)}` },
-  x: { name: 'X', href: ({ url, text }) => `https://x.com/intent/tweet?text=${e(text)}&url=${e(url)}` },
-  vk: { name: 'ВКонтакте', href: ({ url, title }) => `https://vk.com/share.php?url=${e(url)}&title=${e(title)}` },
-  reddit: { name: 'Reddit', href: ({ url, title }) => `https://www.reddit.com/submit?url=${e(url)}&title=${e(title)}` },
-  linkedin: { name: 'LinkedIn', href: ({ url }) => `https://www.linkedin.com/sharing/share-offsite/?url=${e(url)}` },
-  threads: { name: 'Threads', href: ({ url, text }) => `https://www.threads.net/intent/post?text=${e(`${text}\n${url}`)}` },
-  bluesky: { name: 'Bluesky', href: ({ url, text }) => `https://bsky.app/intent/compose?text=${e(`${text}\n${url}`)}` },
+/**
+ * Ссылки для публикации у самих соцсетей. Какие показывать и в каком порядке — в словаре языка.
+ * color — цвет знакомой всем плашки соцсети, чтобы кнопку узнавали с первого взгляда. У X и Threads он чёрный,
+ * на тёмном фоне его не видно, поэтому светло-серый.
+ */
+const networks: Record<Network, { name: string; Icon: typeof XIcon; color: string; href: (post: Post) => string }> = {
+  telegram: { name: 'Telegram', Icon: TelegramIcon, color: '#26A5E4', href: ({ url, text }) => `https://t.me/share/url?url=${e(url)}&text=${e(text)}` },
+  x: { name: 'X', Icon: XIcon, color: '#E7E7E7', href: ({ url, text }) => `https://x.com/intent/tweet?text=${e(text)}&url=${e(url)}` },
+  vk: { name: 'ВКонтакте', Icon: VkIcon, color: '#4C9AFF', href: ({ url, title }) => `https://vk.com/share.php?url=${e(url)}&title=${e(title)}` },
+  reddit: { name: 'Reddit', Icon: RedditIcon, color: '#FF5A1F', href: ({ url, title }) => `https://www.reddit.com/submit?url=${e(url)}&title=${e(title)}` },
+  linkedin: { name: 'LinkedIn', Icon: LinkedinIcon, color: '#4C9BE8', href: ({ url }) => `https://www.linkedin.com/sharing/share-offsite/?url=${e(url)}` },
+  threads: { name: 'Threads', Icon: ThreadsIcon, color: '#E7E7E7', href: ({ url, text }) => `https://www.threads.net/intent/post?text=${e(`${text}\n${url}`)}` },
+  bluesky: { name: 'Bluesky', Icon: BlueskyIcon, color: '#3D9BFF', href: ({ url, text }) => `https://bsky.app/intent/compose?text=${e(`${text}\n${url}`)}` },
 }
 
 /**
@@ -45,7 +50,7 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
   const [copied, setCopied] = useState<Copied>(null)
   const card = imageUrl(imagePath)
   const shared = { url, text, title: text.split('\n')[0] }
-  const targets = t.share.networks.map((id) => ({ name: networks[id].name, href: networks[id].href(shared) }))
+  const targets = t.share.networks.map((id) => ({ ...networks[id], href: networks[id].href(shared) }))
 
   function flash(what: Copied) {
     setCopied(what)
@@ -122,7 +127,15 @@ export function ShareDialog({ ref, url, post, imagePath }: Props) {
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-2 gap-2.5">
               {targets.map((target) => (
-                <a key={target.name} href={target.href} target="_blank" rel="noopener noreferrer" className={secondary}>
+                <a
+                  key={target.name}
+                  href={target.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ '--brand': target.color } as CSSProperties}
+                  className="flex min-h-11 items-center justify-start gap-2.5 rounded-lg border border-[color-mix(in_srgb,var(--brand)_38%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] px-3.5 text-[14px] font-semibold transition-colors hover:border-[color-mix(in_srgb,var(--brand)_70%,transparent)] hover:bg-[color-mix(in_srgb,var(--brand)_22%,transparent)]"
+                >
+                  <target.Icon className="size-[18px] shrink-0 text-(--brand)" />
                   {target.name}
                 </a>
               ))}
