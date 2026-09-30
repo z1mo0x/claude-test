@@ -26,6 +26,19 @@ const set = await call('setWebhook', {
 })
 console.log('setWebhook:', set.ok ? 'готово' : set.description)
 
+// Меню команд (кнопка «/» у поля ввода) для всех чатов по умолчанию.
+const commands = await call('setMyCommands', {
+  commands: [
+    { command: 'complaints', description: 'Жалобы и обращения с сайта' },
+    { command: 'next', description: 'Ближайшие посты' },
+    { command: 'stats', description: 'Статистика и состояние бота' },
+    { command: 'post', description: 'Предпросмотр поста: /post id' },
+    { command: 'testchannel', description: 'Проверить публикацию в канал' },
+    { command: 'help', description: 'Помощь' },
+  ],
+})
+console.log('setMyCommands:', commands.ok ? 'готово' : commands.description)
+
 const info = await call('getWebhookInfo', {})
 console.log('Адрес:', info.result?.url, '| ошибка:', info.result?.last_error_message ?? 'нет')
 process.exit(set.ok ? 0 : 1)

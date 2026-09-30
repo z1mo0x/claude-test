@@ -16,7 +16,7 @@ import { deliver, dueAt, moscow } from './publisher'
 import { render } from './render'
 import { POSTS } from './schedule'
 import { collectFacts } from './stats'
-import { answerCallback, editMessage, notifyOwner, sendMessage, type InlineButton, type Markup } from './telegram'
+import { answerCallback, editMessage, notifyOwner, sendMessage, tg, type InlineButton, type Markup } from './telegram'
 
 type Message = { message_id: number; chat: { id: number }; from?: { id: number }; text?: string }
 type Callback = { id: string; from: { id: number }; data?: string; message?: Message }
@@ -33,12 +33,29 @@ const MENU: Markup = {
   is_persistent: true,
 }
 
+/** Меню команд рядом с полем ввода (кнопка «/»). Только в личном чате владельца. */
+const COMMANDS = [
+  { command: 'complaints', description: 'Жалобы и обращения с сайта' },
+  { command: 'next', description: 'Ближайшие посты' },
+  { command: 'stats', description: 'Статистика и состояние бота' },
+  { command: 'post', description: 'Предпросмотр поста: /post id' },
+  { command: 'testchannel', description: 'Проверить публикацию в канал' },
+  { command: 'help', description: 'Помощь' },
+]
+
+async function registerMenu(chat: number) {
+  await tg('setMyCommands', { commands: COMMANDS, scope: { type: 'chat', chat_id: chat } }).catch((error) =>
+    console.error('Не удалось записать меню команд', error),
+  )
+}
+
 const HELP = [
   'Я бот Projectyard. Команды:',
   '📋 Жалобы — обращения «удалить или пожаловаться» с сайта',
   '🗓 Ближайшие посты — календарь продвижения',
   '📊 Статистика — счётчик, причины, состояние бота',
   '/post <id> — предпросмотр поста и кнопки «опубликовать сейчас» или «отметить сделанным»',
+  '/testchannel — пробное сообщение в канал, чтобы проверить, что бот может там публиковать',
 ].join('\n')
 
 const isOwner = (id: number | undefined) => Boolean(id) && String(id) === botEnv().ownerId
@@ -60,7 +77,11 @@ export async function handleUpdate(update: Update) {
     return
   }
 
-  if (text === '/start' || text === '/help') return void (await sendMessage(chat, HELP, MENU))
+  if (text === '/start' || text === '/help') {
+    await registerMenu(chat)
+    return void (await sendMessage(chat, HELP, MENU))
+  }
+  if (text === '/testchannel') return testChannel(chat)
   if (text === '/complaints' || text.includes('Жалобы')) return showReports(chat)
   if (text === '/next' || text.includes('Ближайшие')) return showNext(chat)
   if (text === '/stats' || text.includes('Статистика')) return showStats(chat)
@@ -69,6 +90,18 @@ export async function handleUpdate(update: Update) {
 }
 
 // ── Жалобы ──────────────────────────────────────────────────────────────────
+
+/** Новое обращение владельцу сразу карточкой с кнопками. Не бросает: вызывается после ответа сайта. */
+export async function announceReport(id: number) {
+  const { token, ownerId } = botEnv()
+  if (!token || !ownerId) return
+  try {
+    const report = await reportById(id)
+    if (report) await sendMessage(ownerId, `🆕 ${reportText(report)}`, reportButtons(report))
+  } catch (error) {
+    console.error('Не удалось сообщить об обращении', error)
+  }
+}
 
 const KIND: Record<ReportRow['kind'], string> = { remove_own: 'Удалить (владелец)', complaint: 'Жалоба' }
 
@@ -202,6 +235,20 @@ async function handlePostAction(chat: number, action: string, id: string): Promi
     return 'Не вышло'
   }
   return undefined
+}
+
+// ── Проверка канала ─────────────────────────────────────────────────────────
+
+async function testChannel(chat: number) {
+  const { channel } = botEnv()
+  if (!channel) return void (await sendMessage(chat, 'TELEGRAM_CHANNEL_ID не задан: посты «в канал» приходят сюда предпросмотром.'))
+  try {
+    await sendMessage(channel, '🔧 Проверка бота Projectyard: публикация в канал работает. Это сообщение можно удалить.')
+    await sendMessage(chat, `✅ Отправил пробное сообщение в ${channel}. Оно должно появиться в канале.`)
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    await sendMessage(chat, `⚠️ В канал не отправилось: ${reason}\nПроверь, что бот администратор канала с правом публиковать, и что TELEGRAM_CHANNEL_ID верный.`)
+  }
 }
 
 // ── Статистика ─────────────────────────────────────────────────────────────
