@@ -4,6 +4,7 @@ import { commitsLabel, daysBetween, lifetime, plural } from '@/lib/format'
 import { GOAL } from '@/lib/config'
 import { allGraves, type GraveRow } from './db'
 import { botEnv } from './env'
+import { NO_UTM, trafficStats } from './traffic'
 
 /** Значения для подстановок {…} в текстах постов. Чего нет в базе, того нет и в объекте. */
 export type Facts = Record<string, string>
@@ -49,7 +50,11 @@ function about(prefix: string, g: GraveRow | undefined, site: string): Facts {
   }
 }
 
-export async function collectFacts(): Promise<{ facts: Facts; total: number; mine: number }> {
+/**
+ * withTraffic — добавить цифры из Яндекс.Метрики ({visitors_week}, {best_sources}, {worst_source}). Это лишний запрос,
+ * поэтому по умолчанию выключено: нужно только при показе и отправке постов.
+ */
+export async function collectFacts(withTraffic = false): Promise<{ facts: Facts; total: number; mine: number }> {
   const { ownerLogin, site } = botEnv()
   const [graves, repos] = await Promise.all([allGraves(), githubRepos(ownerLogin)])
 
@@ -70,6 +75,16 @@ export async function collectFacts(): Promise<{ facts: Facts; total: number; min
       : {}),
     ...about('mine', mostCommits(mine), site),
     ...(repos !== null ? { gh_repos_label: `${repos} ${plural(repos, ['репозиторий', 'репозитория', 'репозиториев'])}` } : {}),
+  }
+  if (withTraffic) {
+    const traffic = await trafficStats()
+    if (traffic.ok) {
+      facts.visitors_week = `${traffic.week.users} ${plural(traffic.week.users, ['посетитель', 'посетителя', 'посетителей'])}`
+      // Лучшие и худшие площадки считаются только по utm_source: «без метки» — не площадка.
+      const named = traffic.sources.filter((source) => source.name !== NO_UTM)
+      if (named.length >= 2) facts.best_sources = `${named[0].name} и ${named[1].name}`
+      if (named.length >= 3) facts.worst_source = named[named.length - 1].name
+    }
   }
   return { facts, total: graves.length, mine: mine.length }
 }
