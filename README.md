@@ -157,6 +157,23 @@ npx remotion render src/index.ts Launch out/projectyard-launch.mp4 --props='{"si
 
 Remotion бесплатен для частных лиц и команд до трёх человек.
 
+## Telegram-бот
+
+Личный бот владельца, живёт внутри сайта (`src/bot`, маршруты `/api/telegram` и `/api/cron/posts`). Отвечает только `OWNER_TELEGRAM_ID`. Что умеет:
+
+- **Жалобы.** Обращения «удалить или пожаловаться» с сайта (таблица `reports`) с кнопками «Готово», «Отклонить» и «Удалить могилу» (с подтверждением). О новом обращении бот пишет сам.
+- **Календарь продвижения** (`src/bot/schedule.ts`, 14 дней, время по Москве). Посты «в канал» публикует сам в `TELEGRAM_CHANNEL_ID`, для остальных площадок присылает в личку готовый текст с ссылкой и меткой `utm_source`. В текстах подставляются цифры из базы (`{count}`, `{top_cause}`, `{mine_name}` и другие, см. `src/bot/stats.ts`). Если для подстановки нет данных, пост в канал не уходит, бот сообщает об этом.
+- Команды: `/next` (ближайшее), `/post <id>` (предпросмотр, «опубликовать сейчас»), `/stats`, `/whoami`.
+
+Настройка:
+
+1. Создать бота у `@BotFather`, добавить его администратором канала.
+2. Выполнить `supabase/migrations/0004_reports.sql` и `0005_bot_posts.sql`.
+3. Задать переменные из `.env.example` (раздел «Telegram-бот») в Vercel и сделать Redeploy. `OWNER_TELEGRAM_ID` подскажет сам бот по команде `/whoami`.
+4. Зарегистрировать адрес бота у Telegram: в `.env.local` положить `TELEGRAM_BOT_TOKEN` и `TELEGRAM_WEBHOOK_SECRET`, затем `npm run bot:webhook -- https://адрес-сайта`.
+5. В GitHub: Settings → Secrets and variables → Actions: секрет `CRON_SECRET` (тот же, что в Vercel) и переменная `SITE_URL`. Workflow `.github/workflows/promo-cron.yml` раз в 15 минут вызывает `/api/cron/posts`.
+6. Пока `PROMO_START_DATE` не задан, бот ничего не отправляет. Для пробного прогона поставить `BOT_DRY_RUN=1`: посты «в канал» придут вам в личку предпросмотром.
+
 ## На будущее
 
 Галочка «можно передать проект новому хозяину» сохраняется в `projects.adoptable` и пока нигде не показывается.

@@ -1,0 +1,26 @@
+name: Promo bot cron
+
+# Раз в 15 минут будит бота: он публикует посты в канал и присылает напоминания по календарю
+# (src/bot/schedule.ts). GitHub запускает расписание только из ветки по умолчанию и иногда с
+# опозданием на несколько минут, для постов это нормально.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the site
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Задай переменную SITE_URL и секрет CRON_SECRET в Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 60 -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/posts"
